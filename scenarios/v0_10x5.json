@@ -1,0 +1,250 @@
+{
+  "scenario_id": "v0_10x5",
+  "auction_rule": "first-price-sealed",
+  "currency": "USD",
+  "description": "Ten supplier, five lot benchmark for sealed reverse sourcing.",
+  "suppliers": [
+    {
+      "id": "S01",
+      "name": "Alder Components",
+      "defensive_markup_pct": 0.18,
+      "capacity": {
+        "L1": 1000,
+        "L2": 0,
+        "L3": 650,
+        "L4": 800,
+        "L5": 500
+      }
+    },
+    {
+      "id": "S02",
+      "name": "Barton Assembly",
+      "defensive_markup_pct": 0.04,
+      "capacity": {
+        "L1": 900,
+        "L2": 550,
+        "L3": 700,
+        "L4": 750,
+        "L5": 450
+      }
+    },
+    {
+      "id": "S03",
+      "name": "Cinder Logistics",
+      "defensive_markup_pct": 0.15,
+      "capacity": {
+        "L1": 850,
+        "L2": 600,
+        "L3": 900,
+        "L4": 700,
+        "L5": 420
+      }
+    },
+    {
+      "id": "S04",
+      "name": "Dover Metals",
+      "defensive_markup_pct": 0.05,
+      "capacity": {
+        "L1": 1000,
+        "L2": 500,
+        "L3": 600,
+        "L4": 900,
+        "L5": 400
+      }
+    },
+    {
+      "id": "S05",
+      "name": "Elm Optics",
+      "defensive_markup_pct": 0.12,
+      "capacity": {
+        "L1": 800,
+        "L2": 520,
+        "L3": 610,
+        "L4": 720,
+        "L5": 430
+      }
+    },
+    {
+      "id": "S06",
+      "name": "Fennel Packaging",
+      "defensive_markup_pct": 0.07,
+      "capacity": {
+        "L1": 820,
+        "L2": 530,
+        "L3": 620,
+        "L4": 710,
+        "L5": 410
+      }
+    },
+    {
+      "id": "S07",
+      "name": "Granite Tooling",
+      "defensive_markup_pct": 0.2,
+      "capacity": {
+        "L1": 950,
+        "L2": 560,
+        "L3": 630,
+        "L4": 760,
+        "L5": 440
+      }
+    },
+    {
+      "id": "S08",
+      "name": "Harbor Motion",
+      "defensive_markup_pct": 0.03,
+      "capacity": {
+        "L1": 870,
+        "L2": 540,
+        "L3": 640,
+        "L4": 730,
+        "L5": 415
+      }
+    },
+    {
+      "id": "S09",
+      "name": "Ion Fasteners",
+      "defensive_markup_pct": 0.1,
+      "capacity": {
+        "L1": 810,
+        "L2": 510,
+        "L3": 620,
+        "L4": 705,
+        "L5": 405
+      }
+    },
+    {
+      "id": "S10",
+      "name": "Juniper Controls",
+      "defensive_markup_pct": 0.06,
+      "capacity": {
+        "L1": 880,
+        "L2": 515,
+        "L3": 615,
+        "L4": 715,
+        "L5": 425
+      }
+    }
+  ],
+  "lots": [
+    {
+      "id": "L1",
+      "name": "Stamped brackets",
+      "demand": 800,
+      "unit": "each",
+      "max_willingness_to_pay": 16.0,
+      "reserve_unit_price": 13.0,
+      "scoring_weights": {
+        "price": 0.7,
+        "lead_time_days": 0.2,
+        "esg_score": 0.1
+      }
+    },
+    {
+      "id": "L2",
+      "name": "Control housings",
+      "demand": 500,
+      "unit": "each",
+      "max_willingness_to_pay": 24.0,
+      "reserve_unit_price": 21.0,
+      "scoring_weights": {
+        "price": 0.45,
+        "lead_time_days": 0.2,
+        "esg_score": 0.25,
+        "quality_score": 0.1
+      }
+    },
+    {
+      "id": "L3",
+      "name": "Low-voltage harnesses",
+      "demand": 600,
+      "unit": "each",
+      "max_willingness_to_pay": 28.0,
+      "reserve_unit_price": 24.5,
+      "scoring_weights": {
+        "price": 0.35,
+        "lead_time_days": 0.15,
+        "esg_score": 0.35,
+        "quality_score": 0.15
+      }
+    },
+    {
+      "id": "L4",
+      "name": "Packaging trays",
+      "demand": 700,
+      "unit": "each",
+      "max_willingness_to_pay": 13.0,
+      "reserve_unit_price": 10.7,
+      "scoring_weights": {
+        "price": 0.8,
+        "lead_time_days": 0.1,
+        "quality_score": 0.1
+      }
+    },
+    {
+      "id": "L5",
+      "name": "ESG-audited subassemblies",
+      "demand": 400,
+      "unit": "each",
+      "max_willingness_to_pay": 37.0,
+      "reserve_unit_price": 32.0,
+      "scoring_weights": {
+        "price": 0.3,
+        "lead_time_days": 0.15,
+        "esg_score": 0.4,
+        "quality_score": 0.15
+      }
+    }
+  ],
+  "bids": [
+    {"supplier_id": "S01", "lot_id": "L1", "unit_price": 11.8, "true_unit_cost": 10.6, "lead_time_days": 18, "esg_score": 70, "quality_score": 84},
+    {"supplier_id": "S01", "lot_id": "L2", "unit_price": 15.8, "true_unit_cost": 14.9, "lead_time_days": 15, "esg_score": 73, "quality_score": 82},
+    {"supplier_id": "S01", "lot_id": "L3", "unit_price": 22.7, "true_unit_cost": 20.4, "lead_time_days": 22, "esg_score": 75, "quality_score": 85},
+    {"supplier_id": "S01", "lot_id": "L4", "unit_price": 9.6, "true_unit_cost": 8.4, "lead_time_days": 12, "esg_score": 70, "quality_score": 82},
+    {"supplier_id": "S01", "lot_id": "L5", "unit_price": 30.9, "true_unit_cost": 28.1, "lead_time_days": 24, "esg_score": 74, "quality_score": 83},
+    {"supplier_id": "S02", "lot_id": "L1", "unit_price": 12.1, "true_unit_cost": 10.9, "lead_time_days": 16, "esg_score": 72, "quality_score": 86},
+    {"supplier_id": "S02", "lot_id": "L2", "unit_price": 18.7, "true_unit_cost": 16.5, "lead_time_days": 18, "esg_score": 78, "quality_score": 88},
+    {"supplier_id": "S02", "lot_id": "L3", "unit_price": 23.2, "true_unit_cost": 21.1, "lead_time_days": 20, "esg_score": 80, "quality_score": 86},
+    {"supplier_id": "S02", "lot_id": "L4", "unit_price": 10.2, "true_unit_cost": 8.9, "lead_time_days": 10, "esg_score": 73, "quality_score": 84},
+    {"supplier_id": "S02", "lot_id": "L5", "unit_price": 30.5, "true_unit_cost": 27.8, "lead_time_days": 22, "esg_score": 81, "quality_score": 86},
+    {"supplier_id": "S03", "lot_id": "L1", "unit_price": 12.4, "true_unit_cost": 11.0, "lead_time_days": 14, "esg_score": 79, "quality_score": 89},
+    {"supplier_id": "S03", "lot_id": "L2", "unit_price": 19.2, "true_unit_cost": 16.9, "lead_time_days": 13, "esg_score": 88, "quality_score": 91},
+    {"supplier_id": "S03", "lot_id": "L3", "unit_price": 25.2, "true_unit_cost": 21.6, "lead_time_days": 16, "esg_score": 95, "quality_score": 92},
+    {"supplier_id": "S03", "lot_id": "L4", "unit_price": 10.5, "true_unit_cost": 9.0, "lead_time_days": 9, "esg_score": 82, "quality_score": 88},
+    {"supplier_id": "S03", "lot_id": "L5", "unit_price": 31.6, "true_unit_cost": 28.4, "lead_time_days": 18, "esg_score": 92, "quality_score": 91},
+    {"supplier_id": "S04", "lot_id": "L1", "unit_price": 12.0, "true_unit_cost": 10.8, "lead_time_days": 17, "esg_score": 76, "quality_score": 85},
+    {"supplier_id": "S04", "lot_id": "L2", "unit_price": 18.5, "true_unit_cost": 16.2, "lead_time_days": 17, "esg_score": 82, "quality_score": 87},
+    {"supplier_id": "S04", "lot_id": "L3", "unit_price": 23.8, "true_unit_cost": 21.0, "lead_time_days": 18, "esg_score": 84, "quality_score": 89},
+    {"supplier_id": "S04", "lot_id": "L4", "unit_price": 10.1, "true_unit_cost": 8.8, "lead_time_days": 11, "esg_score": 75, "quality_score": 85},
+    {"supplier_id": "S04", "lot_id": "L5", "unit_price": 30.7, "true_unit_cost": 27.6, "lead_time_days": 21, "esg_score": 85, "quality_score": 88},
+    {"supplier_id": "S05", "lot_id": "L1", "unit_price": 11.6, "true_unit_cost": 10.5, "lead_time_days": 20, "esg_score": 68, "quality_score": 82},
+    {"supplier_id": "S05", "lot_id": "L2", "unit_price": 18.1, "true_unit_cost": 16.0, "lead_time_days": 20, "esg_score": 75, "quality_score": 84},
+    {"supplier_id": "S05", "lot_id": "L3", "unit_price": 22.9, "true_unit_cost": 20.9, "lead_time_days": 24, "esg_score": 76, "quality_score": 83},
+    {"supplier_id": "S05", "lot_id": "L4", "unit_price": 9.9, "true_unit_cost": 8.7, "lead_time_days": 13, "esg_score": 71, "quality_score": 83},
+    {"supplier_id": "S05", "lot_id": "L5", "unit_price": 30.1, "true_unit_cost": 27.2, "lead_time_days": 25, "esg_score": 78, "quality_score": 84},
+    {"supplier_id": "S06", "lot_id": "L1", "unit_price": 12.3, "true_unit_cost": 11.2, "lead_time_days": 15, "esg_score": 74, "quality_score": 87},
+    {"supplier_id": "S06", "lot_id": "L2", "unit_price": 18.9, "true_unit_cost": 16.8, "lead_time_days": 16, "esg_score": 80, "quality_score": 87},
+    {"supplier_id": "S06", "lot_id": "L3", "unit_price": 23.4, "true_unit_cost": 21.2, "lead_time_days": 19, "esg_score": 82, "quality_score": 88},
+    {"supplier_id": "S06", "lot_id": "L4", "unit_price": 10.3, "true_unit_cost": 9.0, "lead_time_days": 10, "esg_score": 76, "quality_score": 86},
+    {"supplier_id": "S06", "lot_id": "L5", "unit_price": 31.0, "true_unit_cost": 28.0, "lead_time_days": 20, "esg_score": 83, "quality_score": 88},
+    {"supplier_id": "S07", "lot_id": "L1", "unit_price": 11.7, "true_unit_cost": 10.4, "lead_time_days": 19, "esg_score": 77, "quality_score": 86},
+    {"supplier_id": "S07", "lot_id": "L2", "unit_price": 17.9, "true_unit_cost": 15.7, "lead_time_days": 19, "esg_score": 79, "quality_score": 85},
+    {"supplier_id": "S07", "lot_id": "L3", "unit_price": 22.4, "true_unit_cost": 20.0, "lead_time_days": 23, "esg_score": 79, "quality_score": 86},
+    {"supplier_id": "S07", "lot_id": "L4", "unit_price": 9.5, "true_unit_cost": 8.3, "lead_time_days": 14, "esg_score": 73, "quality_score": 84},
+    {"supplier_id": "S07", "lot_id": "L5", "unit_price": 29.8, "true_unit_cost": 26.9, "lead_time_days": 26, "esg_score": 80, "quality_score": 85},
+    {"supplier_id": "S08", "lot_id": "L1", "unit_price": 12.2, "true_unit_cost": 10.9, "lead_time_days": 13, "esg_score": 81, "quality_score": 90},
+    {"supplier_id": "S08", "lot_id": "L2", "unit_price": 18.8, "true_unit_cost": 16.4, "lead_time_days": 14, "esg_score": 86, "quality_score": 91},
+    {"supplier_id": "S08", "lot_id": "L3", "unit_price": 23.9, "true_unit_cost": 21.4, "lead_time_days": 17, "esg_score": 88, "quality_score": 91},
+    {"supplier_id": "S08", "lot_id": "L4", "unit_price": 10.4, "true_unit_cost": 9.1, "lead_time_days": 9, "esg_score": 79, "quality_score": 88},
+    {"supplier_id": "S08", "lot_id": "L5", "unit_price": 30.8, "true_unit_cost": 27.5, "lead_time_days": 19, "esg_score": 90, "quality_score": 92},
+    {"supplier_id": "S09", "lot_id": "L1", "unit_price": 11.9, "true_unit_cost": 10.7, "lead_time_days": 17, "esg_score": 73, "quality_score": 84},
+    {"supplier_id": "S09", "lot_id": "L2", "unit_price": 18.3, "true_unit_cost": 16.1, "lead_time_days": 18, "esg_score": 77, "quality_score": 86},
+    {"supplier_id": "S09", "lot_id": "L3", "unit_price": 22.8, "true_unit_cost": 20.8, "lead_time_days": 21, "esg_score": 78, "quality_score": 84},
+    {"supplier_id": "S09", "lot_id": "L4", "unit_price": 9.8, "true_unit_cost": 8.6, "lead_time_days": 12, "esg_score": 72, "quality_score": 84},
+    {"supplier_id": "S09", "lot_id": "L5", "unit_price": 30.3, "true_unit_cost": 27.3, "lead_time_days": 23, "esg_score": 79, "quality_score": 86},
+    {"supplier_id": "S10", "lot_id": "L1", "unit_price": 12.5, "true_unit_cost": 11.3, "lead_time_days": 14, "esg_score": 80, "quality_score": 89},
+    {"supplier_id": "S10", "lot_id": "L2", "unit_price": 19.1, "true_unit_cost": 16.7, "lead_time_days": 15, "esg_score": 84, "quality_score": 90},
+    {"supplier_id": "S10", "lot_id": "L3", "unit_price": 24.0, "true_unit_cost": 21.5, "lead_time_days": 18, "esg_score": 87, "quality_score": 90},
+    {"supplier_id": "S10", "lot_id": "L4", "unit_price": 10.6, "true_unit_cost": 9.2, "lead_time_days": 10, "esg_score": 78, "quality_score": 87},
+    {"supplier_id": "S10", "lot_id": "L5", "unit_price": 31.2, "true_unit_cost": 28.1, "lead_time_days": 20, "esg_score": 87, "quality_score": 90}
+  ]
+}

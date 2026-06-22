@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://athenatheowl.example/schemas/sealed-bid-sourcing/receipt.schema.json",
+  "title": "Sealed Bid Sourcing Run Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "scenario_id",
+    "scenario_hash",
+    "runtime",
+    "runtime_version",
+    "generated_at",
+    "auction_rule",
+    "commitments",
+    "assignments",
+    "surplus",
+    "leakage_profile"
+  ],
+  "properties": {
+    "receipt_id": {
+      "type": "string"
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "scenario_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "runtime": {
+      "type": "string",
+      "enum": [
+        "sealed",
+        "unsealed"
+      ]
+    },
+    "runtime_version": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "auction_rule": {
+      "type": "string"
+    },
+    "commitments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/commitment"
+      }
+    },
+    "assignments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/assignment"
+      }
+    },
+    "surplus": {
+      "$ref": "#/$defs/surplus"
+    },
+    "leakage_profile": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "commitment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supplier_id",
+        "commitment_hash"
+      ],
+      "properties": {
+        "supplier_id": {
+          "type": "string"
+        },
+        "commitment_hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      }
+    },
+    "assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lot_id",
+        "supplier_id",
+        "quantity",
+        "cleared_unit_price",
+        "opened_bid",
+        "score",
+        "buyer_surplus",
+        "supplier_surplus",
+        "total_surplus",
+        "status"
+      ],
+      "properties": {
+        "lot_id": {
+          "type": "string"
+        },
+        "supplier_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "cleared_unit_price": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "opened_bid": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "buyer_surplus": {
+          "type": "number"
+        },
+        "supplier_surplus": {
+          "type": "number"
+        },
+        "total_surplus": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "assigned",
+            "unassigned"
+          ]
+        }
+      }
+    },
+    "surplus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "buyer",
+        "supplier",
+        "total"
+      ],
+      "properties": {
+        "buyer": {
+          "type": "number"
+        },
+        "supplier": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

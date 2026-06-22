@@ -1,96 +1,90 @@
 # Sealed-Bid Sourcing Layer
 
-An MPC/PSI-backed sealed-bid auction runtime that plugs into existing
-e-sourcing tools (Coupa, Zip, Ariba) so suppliers get a cryptographic
-guarantee that their bid is only used for ranking — restoring
-strategyproofness to reverse auctions that have visibly lost it.
+Sealed Bid Sourcing is a reference benchmark for sealed-bid reverse sourcing.
+It compares a sealed receipt-producing runtime with an unsealed baseline on the
+same multi-attribute procurement scenario.
 
 ## What this is
 
-Coupa and Pactum shipped 20+ persona-based bid-comparison agents and
-LLM-driven negotiation bots through 2024-2026. Suppliers responded by
-shading bids defensively because they cannot verify what the buyer's
-agent does with the disclosed price. The reverse auction is no longer
-strategyproof, and supplier-side trade associations have begun telling
-members to stop submitting best price.
+The repo is a v0.1 data-report artifact:
 
-This repo is the public benchmark and reference implementation of an
-MPC-backed sealed-bid layer that sits next to (not inside) Coupa /
-Zip / Ariba. Suppliers submit ciphertexts; the runtime ranks; only
-the winner's bid is opened. The buyer's bid-comparison agent never
-sees losing prices.
+- `scenarios/v0_10x5.json` defines ten suppliers and five lots.
+- `schemas/` defines scenario and receipt JSON surfaces.
+- `src/sealed_bid_sourcing/` provides the CLI.
+- `runs/` contains checked-in sealed and unsealed receipts.
+- `reports/surplus_delta.md` contains the surplus comparison.
+- `paper/` contains the draft paper surface and leakage bound.
 
-## Status
+The sealed runtime opens winning bid values in the receipt. Losing bid values
+stay out of the buyer-side output. The unsealed baseline applies supplier
+defensive markups before reserve filtering and scoring.
 
-v0 scaffold. No implementation yet. Specs in `specs/0001-foundation/`
-name the scenario class, the leakage-bound proof obligation, and the
-first 10-supplier-5-lot benchmark. PR 0002 will extend
-`procurement-negotiation-lab` with the sealed-bid scenario class and
-land a paper draft skeleton.
+## Current state
+
+v0.1 is a reference implementation and report fixture. It is built for
+correctness, auditability, and repeatable review on the canonical benchmark.
+It is not production MPC.
 
 ## How to run
 
-Placeholder. Will land in spec 0002. The intended invocation:
+```bash
+python -m uv run pytest
+python -m uv run python scripts/voice_lint.py paper/ README.md
+python -m uv run python scripts/validate_schemas.py schemas/ scenarios/ runs/
+python -m uv run python scripts/validate_leakage_bound.py paper/leakage_bounds.yaml --runtime sealed
+python -m uv run python -m sealed_bid_sourcing validate scenarios/v0_10x5.json
+```
+
+To regenerate the checked-in run artifacts:
 
 ```bash
-python -m sealed_bid_sourcing scenario create \
-  --suppliers 10 --lots 5 --out scenarios/v0.json
-python -m sealed_bid_sourcing run \
-  --scenario scenarios/v0.json \
-  --runtime mpc-reference \
-  --out runs/v0/
-python -m sealed_bid_sourcing surplus-delta \
-  --sealed runs/v0/sealed.json \
-  --unsealed runs/v0/unsealed.json \
+python -m uv run python -m sealed_bid_sourcing run \
+  --scenario scenarios/v0_10x5.json \
+  --runtime sealed \
+  --out runs/sealed_v0/
+
+python -m uv run python -m sealed_bid_sourcing run \
+  --scenario scenarios/v0_10x5.json \
+  --runtime unsealed \
+  --out runs/unsealed_v0/
+
+python -m uv run python -m sealed_bid_sourcing surplus-delta \
+  --sealed runs/sealed_v0/receipt.json \
+  --unsealed runs/unsealed_v0/receipt.json \
   --out reports/surplus_delta.md
+```
+
+Without uv, the package also runs from a local editable install:
+
+```bash
+python -m pytest
+python -m sealed_bid_sourcing validate scenarios/v0_10x5.json
 ```
 
 ## Layout
 
-```
+```text
 sealed-bid-sourcing/
-  README.md
-  LICENSE
-  AGENTS.md
-  .gitignore
+  docs/
+    product-brief.md
+    system-map.md
   specs/
     0001-foundation/
-      requirements.md
-      design.md
-      tasks.md
-      acceptance.md
-  docs/
-    first-pr.md
-  paper/                 # arrives in PR 0002
-  scenarios/             # benchmark instance JSON
-  src/                   # arrives in PR 0002
+    0002-design/
+  schemas/
+    scenario.schema.json
+    receipt.schema.json
+  scenarios/
+    v0_10x5.json
+  src/sealed_bid_sourcing/
+  scripts/
+  tests/
+  runs/
+  reports/
+  paper/
+  decisions/
+  STATUS.md
 ```
-
-## Why this exists
-
-Mechanism-design academics have published PSI-based sealed-bid papers
-(notably ScienceDirect Jan 2026) but no one with procurement-shape
-test infrastructure has built a benchmark on top. The
-`procurement-negotiation-lab` repo is a working multi-attribute
-auction simulator with 12+ specs. It is the right launchpad. Adding
-a sealed-bid scenario class plus an MPC reference runtime plus a
-calibrated surplus-recovery-vs-unsealed-baseline dataset is the
-artifact buyers and supplier coalitions cannot ignore.
-
-## First artifact
-
-A public benchmark plus CC-BY paper. Extend
-`procurement-negotiation-lab` with a sealed-bid scenario class,
-run on a 10-supplier 5-lot RFx, publish the leakage-bound proof plus
-the surplus-recovery delta vs. an unsealed Coupa-style baseline.
-
-## Compounds with
-
-- `procurement-negotiation-lab` (the literal launchpad)
-- `agent-notary-layer` (receipt schema cites the sealed-bid runtime
-  as an audit-trail source)
-- `supplier-risk-rag-agent` (eval discipline transfers to
-  strategyproofness regression tests)
 
 ## License
 

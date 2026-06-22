@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://athenatheowl.example/schemas/sealed-bid-sourcing/scenario.schema.json",
+  "title": "Sealed Bid Sourcing Scenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scenario_id",
+    "auction_rule",
+    "currency",
+    "suppliers",
+    "lots",
+    "bids"
+  ],
+  "properties": {
+    "scenario_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_\\-]+$"
+    },
+    "auction_rule": {
+      "type": "string",
+      "enum": [
+        "first-price-sealed",
+        "vickrey-sealed"
+      ]
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 3
+    },
+    "description": {
+      "type": "string"
+    },
+    "suppliers": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/supplier"
+      }
+    },
+    "lots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/lot"
+      }
+    },
+    "bids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bid"
+      }
+    }
+  },
+  "$defs": {
+    "supplier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "capacity",
+        "defensive_markup_pct"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^S[0-9]{2}$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "capacity": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "defensive_markup_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "lot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "demand",
+        "unit",
+        "max_willingness_to_pay",
+        "reserve_unit_price",
+        "scoring_weights"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^L[0-9]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "demand": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "type": "string"
+        },
+        "max_willingness_to_pay": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "reserve_unit_price": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "scoring_weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 2,
+          "required": [
+            "price"
+          ],
+          "properties": {
+            "price": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "lead_time_days": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "esg_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "quality_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "bid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supplier_id",
+        "lot_id",
+        "unit_price",
+        "true_unit_cost",
+        "lead_time_days",
+        "esg_score",
+        "quality_score"
+      ],
+      "properties": {
+        "supplier_id": {
+          "type": "string",
+          "pattern": "^S[0-9]{2}$"
+        },
+        "lot_id": {
+          "type": "string",
+          "pattern": "^L[0-9]+$"
+        },
+        "unit_price": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "true_unit_cost": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "lead_time_days": {
+          "type": "number",
+          "minimum": 0
+        },
+        "esg_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "quality_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    }
+  }
+}
