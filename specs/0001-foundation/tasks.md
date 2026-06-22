@@ -2,19 +2,19 @@
 
 ## PR 0002 — scenario schema, benchmark instance, paper skeleton
 
-- [ ] Write `schemas/scenario.schema.json` matching R-SBS-001 and
+- [x] Write `schemas/scenario.schema.json` matching R-SBS-001 and
       R-SBS-002.
-- [ ] Author `scenarios/v0_10x5.json` matching R-SBS-003.
-- [ ] Add `paper/sealed-bid-sourcing.tex` skeleton with section
+- [x] Author `scenarios/v0_10x5.json` matching R-SBS-003.
+- [x] Add `paper/sealed-bid-sourcing.tex` skeleton with section
       headings and the abstract.
-- [ ] Add `paper/refs.bib` seeded with the ScienceDirect Jan 2026
+- [x] Add `paper/refs.bib` seeded with the ScienceDirect Jan 2026
       PSI paper plus 4 underlying primitives.
-- [ ] Add `paper/leakage_bounds.yaml` with the v0 threat-model
+- [x] Add `paper/leakage_bounds.yaml` with the v0 threat-model
       placeholder.
-- [ ] Add `scripts/voice_lint.py` (copy template).
-- [ ] Add `scripts/validate_schemas.py` and
+- [x] Add `scripts/voice_lint.py` (copy template).
+- [x] Add `scripts/validate_schemas.py` and
       `scripts/validate_leakage_bound.py`.
-- [ ] Add `pyproject.toml`.
+- [x] Add `pyproject.toml`.
 
 ## PR 0003 — runtime reference implementation
 

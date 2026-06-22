@@ -1,0 +1,154 @@
+{
+  "assignments": [
+    {
+      "buyer_surplus": 3440.0,
+      "cleared_unit_price": 11.7,
+      "lot_id": "L1",
+      "opened_bid": {
+        "esg_score": 77,
+        "lead_time_days": 19,
+        "quality_score": 86,
+        "sealed_unit_price": 11.7,
+        "true_unit_cost": 10.4,
+        "unit_price": 11.7
+      },
+      "quantity": 800,
+      "score": 0.720024,
+      "status": "assigned",
+      "supplier_id": "S07",
+      "supplier_surplus": 1040.0,
+      "total_surplus": 4480.0
+    },
+    {
+      "buyer_surplus": 2600.0,
+      "cleared_unit_price": 18.8,
+      "lot_id": "L2",
+      "opened_bid": {
+        "esg_score": 86,
+        "lead_time_days": 14,
+        "quality_score": 91,
+        "sealed_unit_price": 18.8,
+        "true_unit_cost": 16.4,
+        "unit_price": 18.8
+      },
+      "quantity": 500,
+      "score": 0.621429,
+      "status": "assigned",
+      "supplier_id": "S08",
+      "supplier_surplus": 1200.0,
+      "total_surplus": 3800.0
+    },
+    {
+      "buyer_surplus": 2460.0,
+      "cleared_unit_price": 23.9,
+      "lot_id": "L3",
+      "opened_bid": {
+        "esg_score": 88,
+        "lead_time_days": 17,
+        "quality_score": 91,
+        "sealed_unit_price": 23.9,
+        "true_unit_cost": 21.4,
+        "unit_price": 23.9
+      },
+      "quantity": 600,
+      "score": 0.671875,
+      "status": "assigned",
+      "supplier_id": "S08",
+      "supplier_surplus": 1500.0,
+      "total_surplus": 3960.0
+    },
+    {
+      "buyer_surplus": 2450.0,
+      "cleared_unit_price": 9.5,
+      "lot_id": "L4",
+      "opened_bid": {
+        "esg_score": 73,
+        "lead_time_days": 14,
+        "quality_score": 84,
+        "sealed_unit_price": 9.5,
+        "true_unit_cost": 8.3,
+        "unit_price": 9.5
+      },
+      "quantity": 700,
+      "score": 0.833333,
+      "status": "assigned",
+      "supplier_id": "S07",
+      "supplier_surplus": 840.0,
+      "total_surplus": 3290.0
+    },
+    {
+      "buyer_surplus": 2480.0,
+      "cleared_unit_price": 30.8,
+      "lot_id": "L5",
+      "opened_bid": {
+        "esg_score": 90,
+        "lead_time_days": 19,
+        "quality_score": 92,
+        "sealed_unit_price": 30.8,
+        "true_unit_cost": 27.5,
+        "unit_price": 30.8
+      },
+      "quantity": 400,
+      "score": 0.770139,
+      "status": "assigned",
+      "supplier_id": "S08",
+      "supplier_surplus": 1320.0,
+      "total_surplus": 3800.0
+    }
+  ],
+  "auction_rule": "first-price-sealed",
+  "commitments": [
+    {
+      "commitment_hash": "sha256:5dc07ffd40a34182f4efba7e588fc07d82aefe677e5dba67a9761f9bcc4e347e",
+      "supplier_id": "S01"
+    },
+    {
+      "commitment_hash": "sha256:12195d07f2020bbff20b1c6f4df0143c496aca181e6fdd335af6aae881a4e654",
+      "supplier_id": "S02"
+    },
+    {
+      "commitment_hash": "sha256:857640e881f8892a4d0ddebbcb4ea8d4299c1549ea56fe96b7efe7ab56b58961",
+      "supplier_id": "S03"
+    },
+    {
+      "commitment_hash": "sha256:dbb3b61c3e84df673aa61d0e9ef82b1c9f35b56b22996cda58b3cfbdd222e20c",
+      "supplier_id": "S04"
+    },
+    {
+      "commitment_hash": "sha256:465f4a74dbba46e81474352b7ff8d6ef63d2527bb5f4466d88d35d18895c04cf",
+      "supplier_id": "S05"
+    },
+    {
+      "commitment_hash": "sha256:2a86bec2f07d828cc53f545af7e0d7f210b213a16ab5114f43552c0a0ad11d6d",
+      "supplier_id": "S06"
+    },
+    {
+      "commitment_hash": "sha256:b2e892f372062831e71793c53de64d1ad80e1b88894006c7fb448fd6a8252f7b",
+      "supplier_id": "S07"
+    },
+    {
+      "commitment_hash": "sha256:a899dcdea6e98932032b9c06d8b38e0ea42ce809285c3e085d8af582fec21150",
+      "supplier_id": "S08"
+    },
+    {
+      "commitment_hash": "sha256:33b8c88f4e4d899bc7109f4b059154635d16074cdc5c2c334009c87ffea32ed8",
+      "supplier_id": "S09"
+    },
+    {
+      "commitment_hash": "sha256:8954fbe4a471f648fa116b9f1965406b3cfb5b94f4fbf5cfc0e7dafedae58363",
+      "supplier_id": "S10"
+    }
+  ],
+  "generated_at": "2026-06-22T00:00:00Z",
+  "leakage_profile": "winner ids, opened winning bids, per-lot scores, commitments, scenario hash",
+  "receipt_id": "v0_10x5-sealed-v0.1.0",
+  "runtime": "sealed",
+  "runtime_version": "0.1.0",
+  "scenario_hash": "sha256:dd139af3c64218632fdfbf500949ef35b0965aea00b5218e738ec12837a90e4e",
+  "scenario_id": "v0_10x5",
+  "surplus": {
+    "buyer": 13430.0,
+    "supplier": 5900.0,
+    "total": 19330.0
+  }
+}

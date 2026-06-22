@@ -1,0 +1,8 @@
+{"record_type":"runtime_summary","scenario_id":"v0_10x5","runtime":"sealed","receipt_id":"v0_10x5-sealed-v0.1.0","buyer_surplus":13430.0,"supplier_surplus":5900.0,"total_surplus":19330.0}
+{"record_type":"runtime_summary","scenario_id":"v0_10x5","runtime":"unsealed","receipt_id":"v0_10x5-unsealed-v0.1.0","buyer_surplus":11171.0,"supplier_surplus":7519.0,"total_surplus":18690.0}
+{"record_type":"surplus_delta","scenario_id":"v0_10x5","sealed_receipt_id":"v0_10x5-sealed-v0.1.0","unsealed_receipt_id":"v0_10x5-unsealed-v0.1.0","buyer_surplus_delta":2259.0,"supplier_surplus_delta":-1619.0,"total_surplus_delta":640.0}
+{"record_type":"lot_delta","scenario_id":"v0_10x5","lot_id":"L1","sealed_winner":"S07","sealed_price":11.7,"unsealed_winner":"S08","unsealed_price":12.57,"total_surplus_delta":400.0}
+{"record_type":"lot_delta","scenario_id":"v0_10x5","lot_id":"L2","sealed_winner":"S08","sealed_price":18.8,"unsealed_winner":"S08","unsealed_price":19.36,"total_surplus_delta":0.0}
+{"record_type":"lot_delta","scenario_id":"v0_10x5","lot_id":"L3","sealed_winner":"S08","sealed_price":23.9,"unsealed_winner":"S02","unsealed_price":24.13,"total_surplus_delta":-180.0}
+{"record_type":"lot_delta","scenario_id":"v0_10x5","lot_id":"L4","sealed_winner":"S07","sealed_price":9.5,"unsealed_winner":"S02","unsealed_price":10.61,"total_surplus_delta":420.0}
+{"record_type":"lot_delta","scenario_id":"v0_10x5","lot_id":"L5","sealed_winner":"S08","sealed_price":30.8,"unsealed_winner":"S08","unsealed_price":31.72,"total_surplus_delta":0.0}

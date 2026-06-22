@@ -1,0 +1,73 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\title{Sealed-Bid Sourcing}
+\author{AthenaTheOwl}
+\date{June 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This draft defines a small benchmark for reverse sourcing with sealed bids.
+The v0.1 artifact contains a typed 10 supplier, 5 lot scenario, a reference
+sealed runtime, an unsealed comparison runtime, and a surplus report. The
+sealed runtime publishes the scenario hash, supplier commitments, winners,
+opened winning bids, and per-lot scores. It does not publish losing bid
+values. The construction is scoped to private set intersection, additive
+secret sharing, and hash commitments as cited in the bibliography
+\cite{sciencedirect2026psi,freedman2004private,decristofaro2010practical,shamir1979share,beaver1991efficient}.
+\end{abstract}
+
+\section{Introduction}
+
+Reverse auctions rely on suppliers believing that a submitted bid is used for
+award evaluation and not for later price extraction. Buyer-side comparison
+agents weaken that belief when losing bid prices are disclosed to the buyer.
+This repository gives the claim a runnable target: compare a sealed reference
+runtime with an unsealed baseline on the same procurement scenario.
+
+\section{Threat Model}
+
+The v0.1 sealed runtime assumes an honest-but-curious buyer and a
+non-colluding audit verifier. It excludes collusion between those parties,
+malicious denial of service, and production side-channel resistance. The
+runtime leaks only the fields named in \texttt{paper/leakage\_bounds.yaml}.
+
+\section{Scenario}
+
+The canonical scenario is \texttt{scenarios/v0\_10x5.json}. It contains ten
+suppliers, five lots, per-lot scoring weights, reserve prices, capacity
+constraints, supplier defensive markup parameters for the unsealed baseline,
+and bid attributes for price, lead time, ESG score, and quality score.
+
+\section{Reference Runtime}
+
+The sealed runtime evaluates committed bid payloads and opens the winning bid
+for each lot. The checked-in implementation is a reference implementation. It
+models the audit surface and receipt shape; it is not production MPC code.
+
+\section{Unsealed Baseline}
+
+The unsealed runtime applies each supplier's defensive markup before scoring.
+This models the procurement setting where suppliers expect buyer-side agents to
+observe losing prices and therefore stop submitting their best price.
+
+\section{Results}
+
+The checked-in report is \texttt{reports/surplus\_delta.md}. It compares buyer,
+supplier, and total surplus between the two receipts emitted from the canonical
+scenario.
+
+\section{Limitations}
+
+The benchmark is intentionally small. It does not claim throughput, production
+cryptographic hardening, native e-sourcing integration, or a malicious-buyer
+security proof.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}

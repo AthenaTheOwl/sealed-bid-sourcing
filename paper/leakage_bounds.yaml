@@ -1,0 +1,47 @@
+schema_version: 1
+runtime_profiles:
+  sealed:
+    runtime_version: "0.1.0"
+    construction:
+      - private set intersection
+      - additive secret sharing
+      - hash commitments
+    threat_model:
+      buyer: honest-but-curious
+      audit_verifier: malicious-but-non-colluding
+      suppliers: bid commitments are binding for the benchmark run
+      excluded:
+        - buyer and verifier collusion
+        - malicious supplier denial of service
+        - production side-channel resistance
+    allowed_leakage:
+      - scenario_id
+      - scenario_hash
+      - winner_supplier_ids
+      - opened_winning_bid_values
+      - per_lot_scores
+      - supplier_commitment_hashes
+      - runtime_version
+    disallowed_leakage:
+      - losing_bid_values
+      - losing_bid_order_book
+      - supplier_true_costs_for_losing_bids
+    proof_status: bounded placeholder for v0.1 reference runtime
+    citations:
+      - ScienceDirect Jan 2026 PSI procurement paper
+      - Freedman-Nissim-Pinkas 2004 private matching
+      - De Cristofaro-Tsudik 2010 practical private set intersection
+      - Shamir 1979 secret sharing
+      - Beaver 1991 secure multiparty multiplication
+  unsealed:
+    runtime_version: "0.1.0"
+    construction:
+      - disclosed bid comparison
+    threat_model:
+      buyer: sees submitted bid prices
+    allowed_leakage:
+      - all_bid_values
+      - all_supplier_ids
+      - scenario_hash
+    disallowed_leakage: []
+    proof_status: baseline, not privacy preserving
