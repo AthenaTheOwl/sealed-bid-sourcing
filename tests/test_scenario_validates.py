@@ -9,6 +9,7 @@ from sealed_bid_sourcing import (
     validate_scenario_data,
     write_surplus_report,
 )
+from sealed_bid_sourcing.cli import main
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,6 +22,13 @@ def test_canonical_scenario_validates() -> None:
     assert len(scenario["suppliers"]) == 10
     assert len(scenario["lots"]) == 5
     assert scenario["suppliers"][0]["capacity"]["L2"] == 0
+
+
+def test_cli_validate_uses_canonical_artifacts(capsys) -> None:
+    assert main(["validate"]) == 0
+
+    out = capsys.readouterr().out
+    assert "OK" in out
 
 
 def test_reference_runtimes_emit_valid_receipts() -> None:

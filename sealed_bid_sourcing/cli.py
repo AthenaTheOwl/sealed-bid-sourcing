@@ -9,7 +9,12 @@ from .scoring import write_receipt, write_surplus_report
 
 def _cmd_validate(args: argparse.Namespace) -> int:
     failures: list[str] = []
-    for path_text in args.paths:
+    paths = args.paths or [
+        "scenarios/v0_10x5.json",
+        "runs/sealed_v0/receipt.json",
+        "runs/unsealed_v0/receipt.json",
+    ]
+    for path_text in paths:
         path = Path(path_text)
         paths = sorted(path.rglob("*.json")) if path.is_dir() else [path]
         for json_path in paths:
@@ -47,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     subcommands = parser.add_subparsers(dest="command", required=True)
 
     validate = subcommands.add_parser("validate", help="validate scenarios or receipts")
-    validate.add_argument("paths", nargs="+")
+    validate.add_argument("paths", nargs="*")
     validate.set_defaults(func=_cmd_validate)
 
     run = subcommands.add_parser("run", help="run a reference runtime")
