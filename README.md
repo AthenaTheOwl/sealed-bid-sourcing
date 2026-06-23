@@ -25,6 +25,28 @@ v0.1 is a reference implementation and report fixture. It is built for
 correctness, auditability, and repeatable review on the canonical benchmark.
 It is not production MPC.
 
+## live demo
+
+print the committed sealed-vs-unsealed comparison from the terminal:
+
+```bash
+python -m sealed_bid_sourcing show
+```
+
+run the interactive browser locally:
+
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+both read the committed receipts under `runs/` directly (offline, read-only).
+
+deploy on Streamlit Cloud: repo `AthenaTheOwl/sealed-bid-sourcing`, branch `main`,
+main file `streamlit_app.py`.
+
+<!-- live url: (add Streamlit Cloud URL here after deploy) -->
+
 ## How to run
 
 ```bash

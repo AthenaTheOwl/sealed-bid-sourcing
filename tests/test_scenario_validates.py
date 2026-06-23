@@ -31,6 +31,18 @@ def test_cli_validate_uses_canonical_artifacts(capsys) -> None:
     assert "OK" in out
 
 
+def test_show_prints_ranked_comparison(capsys) -> None:
+    assert main(["show"]) == 0
+
+    out = capsys.readouterr().out
+    assert "buyer surplus per runtime" in out
+    assert "headline:" in out
+    # ranked by buyer-surplus gain: L1 (+696) should print before L5 (+368)
+    assert out.index("L1") < out.index("L5")
+    # headline reports the committed buyer-surplus delta
+    assert "+2,259.00 buyer surplus" in out
+
+
 def test_reference_runtimes_emit_valid_receipts() -> None:
     scenario = load_json(SCENARIO)
     sealed = build_receipt(scenario, "sealed")

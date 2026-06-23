@@ -6,6 +6,72 @@ from pathlib import Path
 from .model import load_json, validate_receipt_data, validate_scenario_data
 from .scoring import write_receipt, write_surplus_report
 
+ROOT = Path(__file__).resolve().parents[1]
+SEALED_RECEIPT = ROOT / "runs" / "sealed_v0" / "receipt.json"
+UNSEALED_RECEIPT = ROOT / "runs" / "unsealed_v0" / "receipt.json"
+
+
+def lot_comparison(sealed: dict, unsealed: dict) -> list[dict]:
+    """Per-lot sealed-vs-unsealed comparison rows, sorted by buyer-surplus gain."""
+    sealed_by_lot = {a["lot_id"]: a for a in sealed["assignments"]}
+    unsealed_by_lot = {a["lot_id"]: a for a in unsealed["assignments"]}
+    rows: list[dict] = []
+    for lot_id in sorted(sealed_by_lot):
+        s = sealed_by_lot[lot_id]
+        u = unsealed_by_lot[lot_id]
+        rows.append(
+            {
+                "lot": lot_id,
+                "sealed_winner": s["supplier_id"],
+                "sealed_price": s["cleared_unit_price"],
+                "unsealed_winner": u["supplier_id"],
+                "unsealed_price": u["cleared_unit_price"],
+                "buyer_surplus_gain": round(s["buyer_surplus"] - u["buyer_surplus"], 2),
+                "total_surplus_delta": round(s["total_surplus"] - u["total_surplus"], 2),
+            }
+        )
+    return sorted(rows, key=lambda r: -r["buyer_surplus_gain"])
+
+
+def _cmd_show(args: argparse.Namespace) -> int:
+    if not SEALED_RECEIPT.exists() or not UNSEALED_RECEIPT.exists():
+        print("ERROR: committed receipts not found under runs/. run the sealed/unsealed runtimes first.")
+        return 1
+    sealed = load_json(SEALED_RECEIPT)
+    unsealed = load_json(UNSEALED_RECEIPT)
+
+    buyer_delta = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
+    total_delta = round(sealed["surplus"]["total"] - unsealed["surplus"]["total"], 2)
+    rows = lot_comparison(sealed, unsealed)
+
+    print(f"scenario: {sealed['scenario_id']}  (auction rule: {sealed['auction_rule']})")
+    print(f"sealed vs unsealed runtime, {len(rows)} lots")
+    print()
+    print("buyer surplus per runtime")
+    print(f"  sealed   {sealed['surplus']['buyer']:>10,.2f}")
+    print(f"  unsealed {unsealed['surplus']['buyer']:>10,.2f}")
+    print()
+    header = f"{'lot':<5}{'sealed win':<12}{'price':>8}  {'unsealed win':<14}{'price':>8}  {'buyer gain':>12}"
+    print(header)
+    print("-" * len(header))
+    for r in rows:
+        print(
+            f"{r['lot']:<5}{r['sealed_winner']:<12}{r['sealed_price']:>8.2f}  "
+            f"{r['unsealed_winner']:<14}{r['unsealed_price']:>8.2f}  {r['buyer_surplus_gain']:>12,.2f}"
+        )
+    print()
+    top = rows[0]
+    print(
+        f"headline: sealing bids returns +{buyer_delta:,.2f} buyer surplus vs the unsealed "
+        f"markup baseline (total surplus delta +{total_delta:,.2f})."
+    )
+    print(
+        f"          biggest single-lot gain is {top['lot']}: +{top['buyer_surplus_gain']:,.2f} buyer surplus, "
+        f"where unsealed defensive markups push the cleared price from "
+        f"{top['sealed_price']:.2f} to {top['unsealed_price']:.2f}."
+    )
+    return 0
+
 
 def _cmd_validate(args: argparse.Namespace) -> int:
     failures: list[str] = []
@@ -50,6 +116,9 @@ def _cmd_surplus_delta(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sealed_bid_sourcing")
     subcommands = parser.add_subparsers(dest="command", required=True)
+
+    show = subcommands.add_parser("show", help="print the committed sealed-vs-unsealed surplus comparison")
+    show.set_defaults(func=_cmd_show)
 
     validate = subcommands.add_parser("validate", help="validate scenarios or receipts")
     validate.add_argument("paths", nargs="*")
