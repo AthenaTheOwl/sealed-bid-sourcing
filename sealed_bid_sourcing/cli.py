@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from pathlib import Path
 
 from .model import load_json, validate_receipt_data, validate_scenario_data
@@ -9,6 +11,25 @@ from .scoring import write_receipt, write_surplus_report
 ROOT = Path(__file__).resolve().parents[1]
 SEALED_RECEIPT = ROOT / "runs" / "sealed_v0" / "receipt.json"
 UNSEALED_RECEIPT = ROOT / "runs" / "unsealed_v0" / "receipt.json"
+
+
+class InputError(Exception):
+    """A bad input path or payload that should surface as a clean CLI error, not a traceback."""
+
+
+def _read_json(path: str | Path) -> dict:
+    # Convert filesystem and decode failures into a single actionable message so the
+    # CLI never dumps a raw traceback for a caller-supplied path.
+    try:
+        return load_json(path)
+    except FileNotFoundError:
+        raise InputError(f"{path}: file not found")
+    except IsADirectoryError:
+        raise InputError(f"{path}: is a directory, expected a JSON file")
+    except OSError as exc:
+        raise InputError(f"{path}: cannot read ({exc.strerror or exc})")
+    except json.JSONDecodeError as exc:
+        raise InputError(f"{path}: invalid JSON ({exc})")
 
 
 def lot_comparison(sealed: dict, unsealed: dict) -> list[dict]:
@@ -84,7 +105,7 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         path = Path(path_text)
         paths = sorted(path.rglob("*.json")) if path.is_dir() else [path]
         for json_path in paths:
-            payload = load_json(json_path)
+            payload = _read_json(json_path)
             if "scenario_id" in payload and "lots" in payload and "bids" in payload:
                 errors = validate_scenario_data(payload)
             elif "receipt_id" in payload:
@@ -102,12 +123,22 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    out_path = write_receipt(args.scenario, args.runtime, args.out)
+    try:
+        out_path = write_receipt(args.scenario, args.runtime, args.out)
+    except (FileNotFoundError, IsADirectoryError):
+        raise InputError(f"{args.scenario}: file not found")
+    except OSError as exc:
+        raise InputError(f"{args.scenario}: cannot read ({exc.strerror or exc})")
+    except json.JSONDecodeError as exc:
+        raise InputError(f"{args.scenario}: invalid JSON ({exc})")
     print(out_path)
     return 0
 
 
 def _cmd_surplus_delta(args: argparse.Namespace) -> int:
+    # write_surplus_report reads both receipts; name the offending one when a read fails.
+    for path in (args.sealed, args.unsealed):
+        _read_json(path)
     out_path = write_surplus_report(args.sealed, args.unsealed, args.out)
     print(out_path)
     return 0
@@ -141,4 +172,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except InputError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1

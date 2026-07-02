@@ -1,3 +1,4 @@
+import copy
 import json
 import shutil
 from pathlib import Path
@@ -56,6 +57,58 @@ def test_reference_runtimes_emit_valid_receipts() -> None:
     assert sealed["surplus"]["total"] >= unsealed["surplus"]["total"]
 
 
+def test_sealed_winners_and_surplus_are_pinned() -> None:
+    # Golden-master lock on the sealed clearing. Winner ids depend on the capacity
+    # eligibility filter direction; flipping the comparison reshuffles every winner.
+    scenario = load_json(SCENARIO)
+    sealed = build_receipt(scenario, "sealed")
+
+    winners = [(a["lot_id"], a["supplier_id"]) for a in sealed["assignments"]]
+    assert winners == [
+        ("L1", "S07"),
+        ("L2", "S08"),
+        ("L3", "S08"),
+        ("L4", "S07"),
+        ("L5", "S08"),
+    ]
+    assert sealed["surplus"]["buyer"] == 13430.0
+
+
+def test_unsealed_markup_and_surplus_delta_are_pinned() -> None:
+    # Golden-master lock on the defensive-markup factor. The unsealed L1 winner S08
+    # bids 12.20 with a 0.03 markup, so 12.20 * 1.03 == 12.57. Halving the markup
+    # multiplier in runtime_price moves this cleared price and the surplus delta.
+    scenario = load_json(SCENARIO)
+    sealed = build_receipt(scenario, "sealed")
+    unsealed = build_receipt(scenario, "unsealed")
+
+    unsealed_l1 = next(a for a in unsealed["assignments"] if a["lot_id"] == "L1")
+    assert unsealed_l1["supplier_id"] == "S08"
+    assert unsealed_l1["cleared_unit_price"] == 12.57
+
+    delta_buyer = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
+    assert delta_buyer == 2259.00
+
+
+def test_validate_rejects_out_of_range_markup() -> None:
+    scenario = load_json(SCENARIO)
+    bad = copy.deepcopy(scenario)
+    bad["suppliers"][0]["defensive_markup_pct"] = 5
+
+    errors = validate_scenario_data(bad)
+    sid = bad["suppliers"][0]["id"]
+    assert f"supplier {sid} defensive_markup_pct must be between 0 and 1" in errors
+
+
+def test_validate_rejects_single_supplier() -> None:
+    scenario = load_json(SCENARIO)
+    bad = copy.deepcopy(scenario)
+    bad["suppliers"] = bad["suppliers"][:1]
+
+    errors = validate_scenario_data(bad)
+    assert "scenario must include at least two suppliers" in errors
+
+
 def test_surplus_delta_report_is_written() -> None:
     scenario = load_json(SCENARIO)
     scratch = ROOT / "runs" / "scratch" / "pytest-surplus"
@@ -75,3 +128,20 @@ def test_surplus_delta_report_is_written() -> None:
         assert "Assignment Comparison" in report
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
+
+
+def test_cli_validate_missing_path_reports_clean_error(capsys) -> None:
+    assert main(["validate", "no_such_file.json"]) == 1
+
+    err = capsys.readouterr().err
+    assert "no_such_file.json: file not found" in err
+
+
+def test_cli_validate_bad_json_reports_clean_error(tmp_path, capsys) -> None:
+    garbage = tmp_path / "garbage.json"
+    garbage.write_text("{ not json", encoding="utf-8")
+
+    assert main(["validate", str(garbage)]) == 1
+
+    err = capsys.readouterr().err
+    assert "invalid JSON" in err

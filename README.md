@@ -151,5 +151,3 @@ sealed-bid-sourcing/
 ## License
 
 MIT. See [LICENSE](LICENSE).
-</content>
-</invoke>
