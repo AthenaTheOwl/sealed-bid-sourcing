@@ -55,11 +55,13 @@ def lot_comparison(sealed: dict, unsealed: dict) -> list[dict]:
 
 
 def _cmd_show(args: argparse.Namespace) -> int:
-    if not SEALED_RECEIPT.exists() or not UNSEALED_RECEIPT.exists():
+    sealed_path = Path(args.sealed)
+    unsealed_path = Path(args.unsealed)
+    if not sealed_path.exists() or not unsealed_path.exists():
         print("ERROR: committed receipts not found under runs/. run the sealed/unsealed runtimes first.")
         return 1
-    sealed = load_json(SEALED_RECEIPT)
-    unsealed = load_json(UNSEALED_RECEIPT)
+    sealed = load_json(sealed_path)
+    unsealed = load_json(unsealed_path)
 
     buyer_delta = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
     total_delta = round(sealed["surplus"]["total"] - unsealed["surplus"]["total"], 2)
@@ -98,8 +100,11 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     failures: list[str] = []
     paths = args.paths or [
         "scenarios/v0_10x5.json",
+        "scenarios/v1_20x10.json",
         "runs/sealed_v0/receipt.json",
         "runs/unsealed_v0/receipt.json",
+        "runs/sealed_v1/receipt.json",
+        "runs/unsealed_v1/receipt.json",
     ]
     for path_text in paths:
         path = Path(path_text)
@@ -135,11 +140,71 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _write_surplus_jsonl(sealed: dict, unsealed: dict, path: str | Path) -> Path:
+    delta_buyer = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
+    delta_supplier = round(sealed["surplus"]["supplier"] - unsealed["surplus"]["supplier"], 2)
+    delta_total = round(sealed["surplus"]["total"] - unsealed["surplus"]["total"], 2)
+    sealed_by_lot = {assignment["lot_id"]: assignment for assignment in sealed["assignments"]}
+    unsealed_by_lot = {assignment["lot_id"]: assignment for assignment in unsealed["assignments"]}
+
+    records = [
+        {
+            "record_type": "runtime_summary",
+            "scenario_id": sealed["scenario_id"],
+            "runtime": "sealed",
+            "receipt_id": sealed["receipt_id"],
+            "buyer_surplus": sealed["surplus"]["buyer"],
+            "supplier_surplus": sealed["surplus"]["supplier"],
+            "total_surplus": sealed["surplus"]["total"],
+        },
+        {
+            "record_type": "runtime_summary",
+            "scenario_id": unsealed["scenario_id"],
+            "runtime": "unsealed",
+            "receipt_id": unsealed["receipt_id"],
+            "buyer_surplus": unsealed["surplus"]["buyer"],
+            "supplier_surplus": unsealed["surplus"]["supplier"],
+            "total_surplus": unsealed["surplus"]["total"],
+        },
+        {
+            "record_type": "surplus_delta",
+            "scenario_id": sealed["scenario_id"],
+            "sealed_receipt_id": sealed["receipt_id"],
+            "unsealed_receipt_id": unsealed["receipt_id"],
+            "buyer_surplus_delta": delta_buyer,
+            "supplier_surplus_delta": delta_supplier,
+            "total_surplus_delta": delta_total,
+        },
+    ]
+    for lot_id in sorted(sealed_by_lot):
+        s = sealed_by_lot[lot_id]
+        u = unsealed_by_lot[lot_id]
+        records.append(
+            {
+                "record_type": "lot_delta",
+                "scenario_id": sealed["scenario_id"],
+                "lot_id": lot_id,
+                "sealed_winner": s["supplier_id"],
+                "sealed_price": s["cleared_unit_price"],
+                "unsealed_winner": u["supplier_id"],
+                "unsealed_price": u["cleared_unit_price"],
+                "total_surplus_delta": round(s["total_surplus"] - u["total_surplus"], 2),
+            }
+        )
+
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lines = [json.dumps(record, separators=(",", ":")) for record in records]
+    target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return target
+
+
 def _cmd_surplus_delta(args: argparse.Namespace) -> int:
     # write_surplus_report reads both receipts; name the offending one when a read fails.
-    for path in (args.sealed, args.unsealed):
-        _read_json(path)
+    sealed = _read_json(args.sealed)
+    unsealed = _read_json(args.unsealed)
     out_path = write_surplus_report(args.sealed, args.unsealed, args.out)
+    _write_surplus_jsonl(sealed, unsealed, Path(out_path).with_suffix(".jsonl"))
     print(out_path)
     return 0
 
@@ -149,6 +214,8 @@ def build_parser() -> argparse.ArgumentParser:
     subcommands = parser.add_subparsers(dest="command", required=True)
 
     show = subcommands.add_parser("show", help="print the committed sealed-vs-unsealed surplus comparison")
+    show.add_argument("--sealed", default=SEALED_RECEIPT)
+    show.add_argument("--unsealed", default=UNSEALED_RECEIPT)
     show.set_defaults(func=_cmd_show)
 
     validate = subcommands.add_parser("validate", help="validate scenarios or receipts")
