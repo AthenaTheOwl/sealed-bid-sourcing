@@ -15,8 +15,9 @@ runtime opens only the winning bids in the buyer-side receipt. The losing values
 the losing order book, the true costs behind the losers: none of it leaves the
 envelope.
 
-sealed-bid-sourcing runs one canonical scenario — ten suppliers, five lots — both
-ways and reports the surplus delta. The sealed runtime's receipt exposes a fixed
+sealed-bid-sourcing runs two matched benchmarks both ways: a ten-supplier, five-lot
+case and a twenty-supplier, ten-lot case. It reports the surplus delta for each.
+The sealed runtime's receipt exposes a fixed
 list of fields and nothing else: scenario hash, winner ids, opened winning bids,
 per-lot scores, commitment hashes. A gate (`scripts/validate_leakage_bound.py`)
 fails the build if a field outside that list shows up. The losing bids are
@@ -32,6 +33,9 @@ Print the committed sealed-vs-unsealed comparison from the terminal:
 
 ```bash
 python -m sealed_bid_sourcing show
+python -m sealed_bid_sourcing show \
+  --sealed runs/sealed_v1/receipt.json \
+  --unsealed runs/unsealed_v1/receipt.json
 ```
 
 ```
@@ -95,6 +99,7 @@ python -m uv run python scripts/voice_lint.py paper/ README.md
 python -m uv run python scripts/validate_schemas.py schemas/ scenarios/ runs/
 python -m uv run python scripts/validate_leakage_bound.py paper/leakage_bounds.yaml --runtime sealed
 python -m uv run python -m sealed_bid_sourcing validate scenarios/v0_10x5.json
+python -m uv run python -m sealed_bid_sourcing validate scenarios/v1_20x10.json
 ```
 
 To regenerate the checked-in run artifacts:
@@ -138,6 +143,7 @@ sealed-bid-sourcing/
     receipt.schema.json
   scenarios/
     v0_10x5.json
+    v1_20x10.json
   src/sealed_bid_sourcing/
   scripts/
   tests/
