@@ -122,6 +122,7 @@ python -m uv run python -m sealed_bid_sourcing run \
   --out runs/unsealed_v0/
 
 python -m uv run python -m sealed_bid_sourcing surplus-delta \
+  --scenario scenarios/v0_10x5.json \
   --sealed runs/sealed_v0/receipt.json \
   --unsealed runs/unsealed_v0/receipt.json \
   --out reports/surplus_delta.md

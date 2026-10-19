@@ -58,8 +58,13 @@ observe losing prices and therefore stop submitting their best price.
 \section{Results}
 
 The checked-in report is \texttt{reports/surplus\_delta.md}. It compares buyer,
-supplier, and total surplus between the two receipts emitted from the canonical
-scenario.
+supplier, and total surplus between the sealed and unsealed runs of the canonical
+scenario. Supplier and total surplus come from each run's internal audit file,
+since the receipts carry no true costs. The report also re-runs both runtimes
+with every \texttt{defensive\_markup\_pct} set to zero. Under that control the
+delta is zero, so the reported gain is conditional on the assumed markups (0.03
+to 0.20 per supplier) and is not an estimate of how real suppliers respond to
+disclosure.
 
 \section{Limitations}
 

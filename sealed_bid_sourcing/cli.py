@@ -6,7 +6,15 @@ import sys
 from pathlib import Path
 
 from .model import load_json, validate_receipt_data, validate_scenario_data
-from .scoring import audit_path_for, load_internal_audit, write_receipt, write_surplus_report
+from .scoring import (
+    audit_path_for,
+    load_internal_audit,
+    load_scenario_for,
+    markup_range,
+    write_receipt,
+    write_surplus_report,
+    zero_markup_control,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SEALED_RECEIPT = ROOT / "runs" / "sealed_v0" / "receipt.json"
@@ -143,7 +151,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
 
 def _write_surplus_jsonl(
-    sealed: dict, unsealed: dict, sealed_audit: dict, unsealed_audit: dict, path: str | Path
+    sealed: dict, unsealed: dict, sealed_audit: dict, unsealed_audit: dict, scenario: dict, path: str | Path
 ) -> Path:
     delta_buyer = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
     delta_supplier = round(sealed_audit["surplus"]["supplier"] - unsealed_audit["surplus"]["supplier"], 2)
@@ -152,6 +160,8 @@ def _write_surplus_jsonl(
     unsealed_by_lot = {assignment["lot_id"]: assignment for assignment in unsealed["assignments"]}
     sealed_audit_by_lot = {row["lot_id"]: row for row in sealed_audit["assignments"]}
     unsealed_audit_by_lot = {row["lot_id"]: row for row in unsealed_audit["assignments"]}
+    low_markup, high_markup = markup_range(scenario)
+    control = zero_markup_control(scenario)
 
     records = [
         {
@@ -180,6 +190,16 @@ def _write_surplus_jsonl(
             "buyer_surplus_delta": delta_buyer,
             "supplier_surplus_delta": delta_supplier,
             "total_surplus_delta": delta_total,
+            "defensive_markup_pct_min": low_markup,
+            "defensive_markup_pct_max": high_markup,
+        },
+        {
+            "record_type": "zero_markup_control",
+            "scenario_id": sealed["scenario_id"],
+            "defensive_markup_pct": 0.0,
+            "buyer_surplus_delta": control["buyer"],
+            "supplier_surplus_delta": control["supplier"],
+            "total_surplus_delta": control["total"],
         },
     ]
     for lot_id in sorted(sealed_by_lot):
@@ -214,13 +234,17 @@ def _cmd_surplus_delta(args: argparse.Namespace) -> int:
     unsealed = _read_json(args.unsealed)
     _read_json(audit_path_for(args.sealed))
     _read_json(audit_path_for(args.unsealed))
+    _read_json(args.scenario)
     try:
-        out_path = write_surplus_report(args.sealed, args.unsealed, args.out)
+        scenario = load_scenario_for(args.scenario, sealed, unsealed)
+        out_path = write_surplus_report(args.sealed, args.unsealed, args.out, args.scenario)
         sealed_audit = load_internal_audit(args.sealed, sealed)
         unsealed_audit = load_internal_audit(args.unsealed, unsealed)
     except ValueError as exc:
         raise InputError(str(exc))
-    _write_surplus_jsonl(sealed, unsealed, sealed_audit, unsealed_audit, Path(out_path).with_suffix(".jsonl"))
+    _write_surplus_jsonl(
+        sealed, unsealed, sealed_audit, unsealed_audit, scenario, Path(out_path).with_suffix(".jsonl")
+    )
     print(out_path)
     return 0
 
@@ -245,6 +269,9 @@ def build_parser() -> argparse.ArgumentParser:
     run.set_defaults(func=_cmd_run)
 
     surplus = subcommands.add_parser("surplus-delta", help="write a surplus delta report")
+    surplus.add_argument(
+        "--scenario", required=True, help="scenario both receipts came from; used for the zero-markup control"
+    )
     surplus.add_argument("--sealed", required=True)
     surplus.add_argument("--unsealed", required=True)
     surplus.add_argument("--out", required=True)

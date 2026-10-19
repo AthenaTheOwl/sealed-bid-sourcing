@@ -1,4 +1,5 @@
 import copy
+import json
 import shutil
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from sealed_bid_sourcing import (
     write_surplus_report,
 )
 from sealed_bid_sourcing.cli import main
+from sealed_bid_sourcing.scoring import zero_markup_control
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -174,7 +176,7 @@ def test_surplus_delta_report_is_written() -> None:
         unsealed_path = write_receipt(SCENARIO, "unsealed", scratch / "unsealed")
         report_path = scratch / "surplus_delta.md"
 
-        write_surplus_report(sealed_path, unsealed_path, report_path)
+        write_surplus_report(sealed_path, unsealed_path, report_path, SCENARIO)
 
         report = report_path.read_text(encoding="utf-8")
         assert "Total surplus delta: `640.00`" in report
@@ -182,6 +184,63 @@ def test_surplus_delta_report_is_written() -> None:
         assert "Assignment Comparison" in report
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
+
+
+def test_zero_markup_control_closes_the_gap() -> None:
+    # The only sealed/unsealed difference is the markup the unsealed runtime adds
+    # before scoring, so with zero markup the reported delta must vanish.
+    for scenario_path in [SCENARIO, ROOT / "scenarios" / "v1_20x10.json"]:
+        scenario = load_json(scenario_path)
+        assert zero_markup_control(scenario) == {"buyer": 0.0, "supplier": 0.0, "total": 0.0}
+
+
+def test_surplus_report_carries_zero_markup_control(tmp_path) -> None:
+    sealed_path = write_receipt(SCENARIO, "sealed", tmp_path / "sealed")
+    unsealed_path = write_receipt(SCENARIO, "unsealed", tmp_path / "unsealed")
+    report_path = tmp_path / "surplus_delta.md"
+
+    assert main(
+        [
+            "surplus-delta",
+            "--scenario", str(SCENARIO),
+            "--sealed", str(sealed_path),
+            "--unsealed", str(unsealed_path),
+            "--out", str(report_path),
+        ]
+    ) == 0
+
+    report = report_path.read_text(encoding="utf-8")
+    assert "`defensive_markup_pct` (0.03 to 0.20 in this scenario)" in report
+    assert "## Zero-markup Control" in report
+    assert "Zero-markup control buyer surplus delta: `0.00`" in report
+    records = [json.loads(line) for line in report_path.with_suffix(".jsonl").read_text(encoding="utf-8").splitlines()]
+    control = next(record for record in records if record["record_type"] == "zero_markup_control")
+    assert control["buyer_surplus_delta"] == 0.0
+    assert control["total_surplus_delta"] == 0.0
+
+
+def test_committed_reports_carry_zero_markup_control() -> None:
+    for name in ["surplus_delta", "surplus_delta_v1"]:
+        report = (ROOT / "reports" / f"{name}.md").read_text(encoding="utf-8")
+        assert "## Zero-markup Control" in report, name
+        lines = (ROOT / "reports" / f"{name}.jsonl").read_text(encoding="utf-8").splitlines()
+        assert any(json.loads(line)["record_type"] == "zero_markup_control" for line in lines), name
+
+
+def test_surplus_delta_rejects_a_scenario_the_receipts_did_not_come_from(tmp_path, capsys) -> None:
+    sealed_path = write_receipt(SCENARIO, "sealed", tmp_path / "sealed")
+    unsealed_path = write_receipt(SCENARIO, "unsealed", tmp_path / "unsealed")
+
+    assert main(
+        [
+            "surplus-delta",
+            "--scenario", str(ROOT / "scenarios" / "v1_20x10.json"),
+            "--sealed", str(sealed_path),
+            "--unsealed", str(unsealed_path),
+            "--out", str(tmp_path / "surplus_delta.md"),
+        ]
+    ) == 1
+    assert "scenario_hash differs" in capsys.readouterr().err
 
 
 def test_cli_validate_missing_path_reports_clean_error(capsys) -> None:

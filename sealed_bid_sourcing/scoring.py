@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import Any
 
@@ -262,13 +263,65 @@ def write_receipt(scenario_path: str | Path, runtime: str, out_dir: str | Path) 
     return out_path
 
 
-def write_surplus_report(sealed_path: str | Path, unsealed_path: str | Path, out_path: str | Path) -> Path:
+def markup_range(scenario: dict[str, Any]) -> tuple[float, float]:
+    markups = [supplier.get("defensive_markup_pct", 0.0) for supplier in scenario["suppliers"]]
+    return min(markups), max(markups)
+
+
+def zero_markup_control(scenario: dict[str, Any]) -> dict[str, float]:
+    """Buyer, supplier and total surplus deltas with every defensive_markup_pct set to 0.
+
+    The only sealed/unsealed difference in this model is the markup the unsealed
+    runtime adds before scoring, so this control shows how much of a reported delta
+    the assumed markup produces.
+    """
+    control = copy.deepcopy(scenario)
+    for supplier in control["suppliers"]:
+        supplier["defensive_markup_pct"] = 0.0
+    sealed, sealed_audit = build_run(control, "sealed")
+    unsealed, unsealed_audit = build_run(control, "unsealed")
+    return {
+        "buyer": round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2),
+        "supplier": round(sealed_audit["surplus"]["supplier"] - unsealed_audit["surplus"]["supplier"], 2),
+        "total": round(sealed_audit["surplus"]["total"] - unsealed_audit["surplus"]["total"], 2),
+    }
+
+
+def load_scenario_for(scenario_path: str | Path, *receipts: dict[str, Any]) -> dict[str, Any]:
+    """Load the scenario the receipts were cleared from, checked by scenario_hash."""
+    scenario = load_json(scenario_path)
+    digest = scenario_hash(scenario)
+    for receipt in receipts:
+        if receipt.get("scenario_hash") != digest:
+            raise ValueError(
+                f"{scenario_path} does not match receipt {receipt.get('receipt_id')} (scenario_hash differs)"
+            )
+    return scenario
+
+
+def write_surplus_report(
+    sealed_path: str | Path, unsealed_path: str | Path, out_path: str | Path, scenario_path: str | Path
+) -> Path:
     sealed = load_json(sealed_path)
     unsealed = load_json(unsealed_path)
     for name, receipt in [("sealed", sealed), ("unsealed", unsealed)]:
         errors = validate_receipt_data(receipt)
         if errors:
             raise ValueError(f"{name} receipt invalid: {'; '.join(errors)}")
+    scenario = load_scenario_for(scenario_path, sealed, unsealed)
+    low_markup, high_markup = markup_range(scenario)
+    control = zero_markup_control(scenario)
+    if control["buyer"] == 0 and control["total"] == 0:
+        control_reading = (
+            "With no markup the two runtimes clear every lot the same way, so the headline "
+            "delta comes entirely from the assumed markups. It is a model result conditional "
+            "on those values and does not measure how real suppliers respond to disclosure."
+        )
+    else:
+        control_reading = (
+            f"With no markup the buyer surplus delta is {control['buyer']:.2f}; that part of the "
+            "headline does not come from the markup assumption."
+        )
     # Supplier and total surplus need true costs, which the receipts do not carry.
     sealed_audit = load_internal_audit(sealed_path, sealed)
     unsealed_audit = load_internal_audit(unsealed_path, unsealed)
@@ -311,6 +364,19 @@ def write_surplus_report(sealed_path: str | Path, unsealed_path: str | Path, out
             f"- Buyer surplus delta: `{delta_buyer:.2f}`",
             f"- Supplier surplus delta: `{delta_supplier:.2f}`",
             f"- Total surplus delta: `{delta_total:.2f}`",
+            f"- Markup assumption: the unsealed baseline inflates each bid by its supplier's "
+            f"`defensive_markup_pct` ({low_markup:.2f} to {high_markup:.2f} in this scenario) before scoring.",
+            f"- Zero-markup control buyer surplus delta: `{control['buyer']:.2f}` (see below).",
+            "",
+            "## Zero-markup Control",
+            "",
+            "Same scenario with every supplier's `defensive_markup_pct` set to 0, both runtimes re-run.",
+            "",
+            f"- Buyer surplus delta: `{control['buyer']:.2f}`",
+            f"- Supplier surplus delta: `{control['supplier']:.2f}`",
+            f"- Total surplus delta: `{control['total']:.2f}`",
+            "",
+            control_reading,
             "",
             "## Runtime Totals",
             "",
