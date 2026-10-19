@@ -18,6 +18,7 @@ runtime_profiles:
       - scenario_id
       - scenario_hash
       - winner_supplier_ids
+      # price, lead time, ESG and quality of each winning bid; never its true cost
       - opened_winning_bid_values
       - per_lot_scores
       - supplier_commitment_hashes
@@ -26,6 +27,11 @@ runtime_profiles:
       - losing_bid_values
       - losing_bid_order_book
       - supplier_true_costs_for_losing_bids
+      - supplier_true_costs_for_winning_bids
+      # margin x quantity per lot and its sums (supplier and total surplus); with
+      # the cleared price it gives back the winner's true cost. These stay in the
+      # run's internal_audit.json.
+      - winning_supplier_surplus
     proof_status: bounded placeholder for v0.1 reference runtime
     citations:
       - ScienceDirect Jan 2026 PSI procurement paper
@@ -43,5 +49,10 @@ runtime_profiles:
       - all_bid_values
       - all_supplier_ids
       - scenario_hash
-    disallowed_leakage: []
+    disallowed_leakage:
+      - supplier_true_costs_for_losing_bids
+      - supplier_true_costs_for_winning_bids
+      - winning_supplier_surplus
+      # the bid a supplier would submit without its defensive markup
+      - pre_markup_bid_values
     proof_status: baseline, not privacy preserving

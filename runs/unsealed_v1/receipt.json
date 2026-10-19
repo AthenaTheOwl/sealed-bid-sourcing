@@ -8,16 +8,12 @@
         "esg_score": 81,
         "lead_time_days": 13,
         "quality_score": 90,
-        "sealed_unit_price": 12.3,
-        "true_unit_cost": 11.0,
         "unit_price": 12.67
       },
       "quantity": 1200,
       "score": 1.0,
       "status": "assigned",
-      "supplier_id": "S08",
-      "supplier_surplus": 2004.0,
-      "total_surplus": 7200.0
+      "supplier_id": "S08"
     },
     {
       "buyer_surplus": 4513.5,
@@ -27,16 +23,12 @@
         "esg_score": 86,
         "lead_time_days": 14,
         "quality_score": 91,
-        "sealed_unit_price": 23.0,
-        "true_unit_cost": 20.6,
         "unit_price": 23.69
       },
       "quantity": 850,
       "score": 1.0,
       "status": "assigned",
-      "supplier_id": "S08",
-      "supplier_surplus": 2626.5,
-      "total_surplus": 7140.0
+      "supplier_id": "S08"
     },
     {
       "buyer_surplus": 4718.0,
@@ -46,16 +38,12 @@
         "esg_score": 88,
         "lead_time_days": 17,
         "quality_score": 91,
-        "sealed_unit_price": 35.2,
-        "true_unit_cost": 31.9,
         "unit_price": 36.26
       },
       "quantity": 700,
       "score": 1.0,
       "status": "assigned",
-      "supplier_id": "S08",
-      "supplier_surplus": 3052.0,
-      "total_surplus": 7770.0
+      "supplier_id": "S08"
     },
     {
       "buyer_surplus": 2926.0,
@@ -65,16 +53,12 @@
         "esg_score": 79,
         "lead_time_days": 9,
         "quality_score": 88,
-        "sealed_unit_price": 10.6,
-        "true_unit_cost": 9.2,
         "unit_price": 10.92
       },
       "quantity": 950,
       "score": 0.908537,
       "status": "assigned",
-      "supplier_id": "S08",
-      "supplier_surplus": 1634.0,
-      "total_surplus": 4560.0
+      "supplier_id": "S08"
     },
     {
       "buyer_surplus": 6115.0,
@@ -84,16 +68,12 @@
         "esg_score": 90,
         "lead_time_days": 19,
         "quality_score": 92,
-        "sealed_unit_price": 52.2,
-        "true_unit_cost": 47.0,
         "unit_price": 53.77
       },
       "quantity": 500,
       "score": 0.981739,
       "status": "assigned",
-      "supplier_id": "S08",
-      "supplier_surplus": 3385.0,
-      "total_surplus": 9500.0
+      "supplier_id": "S08"
     },
     {
       "buyer_surplus": 4884.0,
@@ -103,16 +83,12 @@
         "esg_score": 82,
         "lead_time_days": 12,
         "quality_score": 91,
-        "sealed_unit_price": 14.0,
-        "true_unit_cost": 12.6,
         "unit_price": 14.56
       },
       "quantity": 1100,
       "score": 1.0,
       "status": "assigned",
-      "supplier_id": "S18",
-      "supplier_surplus": 2156.0,
-      "total_surplus": 7040.0
+      "supplier_id": "S18"
     },
     {
       "buyer_surplus": 4423.2,
@@ -122,16 +98,12 @@
         "esg_score": 87,
         "lead_time_days": 14,
         "quality_score": 92,
-        "sealed_unit_price": 27.1,
-        "true_unit_cost": 24.4,
         "unit_price": 28.18
       },
       "quantity": 760,
       "score": 1.0,
       "status": "assigned",
-      "supplier_id": "S18",
-      "supplier_surplus": 2872.8,
-      "total_surplus": 7296.0
+      "supplier_id": "S18"
     },
     {
       "buyer_surplus": 3961.6,
@@ -141,16 +113,12 @@
         "esg_score": 89,
         "lead_time_days": 16,
         "quality_score": 92,
-        "sealed_unit_price": 40.2,
-        "true_unit_cost": 36.1,
         "unit_price": 41.81
       },
       "quantity": 640,
       "score": 0.65,
       "status": "assigned",
-      "supplier_id": "S18",
-      "supplier_surplus": 3654.4,
-      "total_surplus": 7616.0
+      "supplier_id": "S18"
     },
     {
       "buyer_surplus": 1449.0,
@@ -160,16 +128,12 @@
         "esg_score": 80,
         "lead_time_days": 9,
         "quality_score": 89,
-        "sealed_unit_price": 9.8,
-        "true_unit_cost": 8.5,
         "unit_price": 10.19
       },
       "quantity": 900,
       "score": 0.968,
       "status": "assigned",
-      "supplier_id": "S18",
-      "supplier_surplus": 1521.0,
-      "total_surplus": 2970.0
+      "supplier_id": "S18"
     },
     {
       "buyer_surplus": 6978.4,
@@ -179,16 +143,12 @@
         "esg_score": 91,
         "lead_time_days": 18,
         "quality_score": 93,
-        "sealed_unit_price": 62.1,
-        "true_unit_cost": 56.1,
         "unit_price": 64.58
       },
       "quantity": 520,
       "score": 1.0,
       "status": "assigned",
-      "supplier_id": "S18",
-      "supplier_surplus": 4409.6,
-      "total_surplus": 11388.0
+      "supplier_id": "S18"
     }
   ],
   "auction_rule": "first-price-sealed",
@@ -282,8 +242,6 @@
   "scenario_hash": "sha256:d359aa6f1331a4bff7fe3629614619b2ff62e51c724be0366abd408583b6d42d",
   "scenario_id": "v1_20x10",
   "surplus": {
-    "buyer": 45164.7,
-    "supplier": 27315.3,
-    "total": 72480.0
+    "buyer": 45164.7
   }
 }

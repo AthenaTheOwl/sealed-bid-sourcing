@@ -1,0 +1,95 @@
+{
+  "assignments": [
+    {
+      "lot_id": "L1",
+      "sealed_unit_price": 11.8,
+      "supplier_id": "S07",
+      "supplier_surplus": 1560.0,
+      "total_surplus": 7800.0,
+      "true_unit_cost": 10.5
+    },
+    {
+      "lot_id": "L2",
+      "sealed_unit_price": 23.0,
+      "supplier_id": "S08",
+      "supplier_surplus": 2040.0,
+      "total_surplus": 7140.0,
+      "true_unit_cost": 20.6
+    },
+    {
+      "lot_id": "L3",
+      "sealed_unit_price": 36.0,
+      "supplier_id": "S03",
+      "supplier_surplus": 2660.0,
+      "total_surplus": 7560.0,
+      "true_unit_cost": 32.2
+    },
+    {
+      "lot_id": "L4",
+      "sealed_unit_price": 9.7,
+      "supplier_id": "S07",
+      "supplier_surplus": 1140.0,
+      "total_surplus": 5225.0,
+      "true_unit_cost": 8.5
+    },
+    {
+      "lot_id": "L5",
+      "sealed_unit_price": 52.2,
+      "supplier_id": "S08",
+      "supplier_surplus": 2600.0,
+      "total_surplus": 9500.0,
+      "true_unit_cost": 47.0
+    },
+    {
+      "lot_id": "L6",
+      "sealed_unit_price": 13.3,
+      "supplier_id": "S17",
+      "supplier_surplus": 1540.0,
+      "total_surplus": 7810.0,
+      "true_unit_cost": 11.9
+    },
+    {
+      "lot_id": "L7",
+      "sealed_unit_price": 27.1,
+      "supplier_id": "S18",
+      "supplier_surplus": 2052.0,
+      "total_surplus": 7296.0,
+      "true_unit_cost": 24.4
+    },
+    {
+      "lot_id": "L8",
+      "sealed_unit_price": 40.6,
+      "supplier_id": "S13",
+      "supplier_surplus": 2752.0,
+      "total_surplus": 7488.0,
+      "true_unit_cost": 36.3
+    },
+    {
+      "lot_id": "L9",
+      "sealed_unit_price": 9.1,
+      "supplier_id": "S17",
+      "supplier_surplus": 990.0,
+      "total_surplus": 3420.0,
+      "true_unit_cost": 8.0
+    },
+    {
+      "lot_id": "L10",
+      "sealed_unit_price": 62.1,
+      "supplier_id": "S18",
+      "supplier_surplus": 3120.0,
+      "total_surplus": 11388.0,
+      "true_unit_cost": 56.1
+    }
+  ],
+  "audit_id": "v1_20x10-sealed-v0.1.0-internal",
+  "receipt_ref": "v1_20x10-sealed-v0.1.0",
+  "runtime": "sealed",
+  "scenario_hash": "sha256:d359aa6f1331a4bff7fe3629614619b2ff62e51c724be0366abd408583b6d42d",
+  "scenario_id": "v1_20x10",
+  "surplus": {
+    "buyer": 54173.0,
+    "supplier": 20454.0,
+    "total": 74627.0
+  },
+  "visibility": "internal: simulator ground truth, never part of the buyer-facing receipt"
+}

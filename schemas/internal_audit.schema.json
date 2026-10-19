@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://athenatheowl.example/schemas/sealed-bid-sourcing/internal_audit.schema.json",
+  "title": "Sealed Bid Sourcing Internal Audit",
+  "description": "Simulator ground truth for one run: winners' true costs, supplier surplus and the pre-markup bid price. Written next to receipt.json for the surplus analysis. It is never part of the buyer-facing receipt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "audit_id",
+    "receipt_ref",
+    "scenario_id",
+    "scenario_hash",
+    "runtime",
+    "visibility",
+    "assignments",
+    "surplus"
+  ],
+  "properties": {
+    "audit_id": {
+      "type": "string"
+    },
+    "receipt_ref": {
+      "type": "string"
+    },
+    "scenario_id": {
+      "type": "string"
+    },
+    "scenario_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "runtime": {
+      "type": "string",
+      "enum": [
+        "sealed",
+        "unsealed"
+      ]
+    },
+    "visibility": {
+      "type": "string",
+      "pattern": "^internal"
+    },
+    "assignments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/assignment"
+      }
+    },
+    "surplus": {
+      "$ref": "#/$defs/surplus"
+    }
+  },
+  "$defs": {
+    "assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lot_id",
+        "supplier_id",
+        "sealed_unit_price",
+        "true_unit_cost",
+        "supplier_surplus",
+        "total_surplus"
+      ],
+      "properties": {
+        "lot_id": {
+          "type": "string"
+        },
+        "supplier_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sealed_unit_price": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "true_unit_cost": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "supplier_surplus": {
+          "type": "number"
+        },
+        "total_surplus": {
+          "type": "number"
+        }
+      }
+    },
+    "surplus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "buyer",
+        "supplier",
+        "total"
+      ],
+      "properties": {
+        "buyer": {
+          "type": "number"
+        },
+        "supplier": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

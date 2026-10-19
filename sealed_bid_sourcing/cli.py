@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from .model import load_json, validate_receipt_data, validate_scenario_data
-from .scoring import write_receipt, write_surplus_report
+from .scoring import audit_path_for, load_internal_audit, write_receipt, write_surplus_report
 
 ROOT = Path(__file__).resolve().parents[1]
 SEALED_RECEIPT = ROOT / "runs" / "sealed_v0" / "receipt.json"
@@ -33,7 +33,7 @@ def _read_json(path: str | Path) -> dict:
 
 
 def lot_comparison(sealed: dict, unsealed: dict) -> list[dict]:
-    """Per-lot sealed-vs-unsealed comparison rows, sorted by buyer-surplus gain."""
+    """Per-lot sealed-vs-unsealed comparison rows from the receipts, sorted by buyer-surplus gain."""
     sealed_by_lot = {a["lot_id"]: a for a in sealed["assignments"]}
     unsealed_by_lot = {a["lot_id"]: a for a in unsealed["assignments"]}
     rows: list[dict] = []
@@ -48,7 +48,6 @@ def lot_comparison(sealed: dict, unsealed: dict) -> list[dict]:
                 "unsealed_winner": u["supplier_id"],
                 "unsealed_price": u["cleared_unit_price"],
                 "buyer_surplus_gain": round(s["buyer_surplus"] - u["buyer_surplus"], 2),
-                "total_surplus_delta": round(s["total_surplus"] - u["total_surplus"], 2),
             }
         )
     return sorted(rows, key=lambda r: -r["buyer_surplus_gain"])
@@ -57,14 +56,17 @@ def lot_comparison(sealed: dict, unsealed: dict) -> list[dict]:
 def _cmd_show(args: argparse.Namespace) -> int:
     sealed_path = Path(args.sealed)
     unsealed_path = Path(args.unsealed)
-    if not sealed_path.exists() or not unsealed_path.exists():
+    run_files = [sealed_path, unsealed_path, audit_path_for(sealed_path), audit_path_for(unsealed_path)]
+    if not all(path.exists() for path in run_files):
         print("ERROR: committed receipts not found under runs/. run the sealed/unsealed runtimes first.")
         return 1
     sealed = load_json(sealed_path)
     unsealed = load_json(unsealed_path)
+    sealed_audit = load_internal_audit(sealed_path, sealed)
+    unsealed_audit = load_internal_audit(unsealed_path, unsealed)
 
     buyer_delta = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
-    total_delta = round(sealed["surplus"]["total"] - unsealed["surplus"]["total"], 2)
+    total_delta = round(sealed_audit["surplus"]["total"] - unsealed_audit["surplus"]["total"], 2)
     rows = lot_comparison(sealed, unsealed)
 
     print(f"scenario: {sealed['scenario_id']}  (auction rule: {sealed['auction_rule']})")
@@ -140,12 +142,16 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
-def _write_surplus_jsonl(sealed: dict, unsealed: dict, path: str | Path) -> Path:
+def _write_surplus_jsonl(
+    sealed: dict, unsealed: dict, sealed_audit: dict, unsealed_audit: dict, path: str | Path
+) -> Path:
     delta_buyer = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
-    delta_supplier = round(sealed["surplus"]["supplier"] - unsealed["surplus"]["supplier"], 2)
-    delta_total = round(sealed["surplus"]["total"] - unsealed["surplus"]["total"], 2)
+    delta_supplier = round(sealed_audit["surplus"]["supplier"] - unsealed_audit["surplus"]["supplier"], 2)
+    delta_total = round(sealed_audit["surplus"]["total"] - unsealed_audit["surplus"]["total"], 2)
     sealed_by_lot = {assignment["lot_id"]: assignment for assignment in sealed["assignments"]}
     unsealed_by_lot = {assignment["lot_id"]: assignment for assignment in unsealed["assignments"]}
+    sealed_audit_by_lot = {row["lot_id"]: row for row in sealed_audit["assignments"]}
+    unsealed_audit_by_lot = {row["lot_id"]: row for row in unsealed_audit["assignments"]}
 
     records = [
         {
@@ -154,8 +160,8 @@ def _write_surplus_jsonl(sealed: dict, unsealed: dict, path: str | Path) -> Path
             "runtime": "sealed",
             "receipt_id": sealed["receipt_id"],
             "buyer_surplus": sealed["surplus"]["buyer"],
-            "supplier_surplus": sealed["surplus"]["supplier"],
-            "total_surplus": sealed["surplus"]["total"],
+            "supplier_surplus": sealed_audit["surplus"]["supplier"],
+            "total_surplus": sealed_audit["surplus"]["total"],
         },
         {
             "record_type": "runtime_summary",
@@ -163,8 +169,8 @@ def _write_surplus_jsonl(sealed: dict, unsealed: dict, path: str | Path) -> Path
             "runtime": "unsealed",
             "receipt_id": unsealed["receipt_id"],
             "buyer_surplus": unsealed["surplus"]["buyer"],
-            "supplier_surplus": unsealed["surplus"]["supplier"],
-            "total_surplus": unsealed["surplus"]["total"],
+            "supplier_surplus": unsealed_audit["surplus"]["supplier"],
+            "total_surplus": unsealed_audit["surplus"]["total"],
         },
         {
             "record_type": "surplus_delta",
@@ -188,7 +194,9 @@ def _write_surplus_jsonl(sealed: dict, unsealed: dict, path: str | Path) -> Path
                 "sealed_price": s["cleared_unit_price"],
                 "unsealed_winner": u["supplier_id"],
                 "unsealed_price": u["cleared_unit_price"],
-                "total_surplus_delta": round(s["total_surplus"] - u["total_surplus"], 2),
+                "total_surplus_delta": round(
+                    sealed_audit_by_lot[lot_id]["total_surplus"] - unsealed_audit_by_lot[lot_id]["total_surplus"], 2
+                ),
             }
         )
 
@@ -200,11 +208,19 @@ def _write_surplus_jsonl(sealed: dict, unsealed: dict, path: str | Path) -> Path
 
 
 def _cmd_surplus_delta(args: argparse.Namespace) -> int:
-    # write_surplus_report reads both receipts; name the offending one when a read fails.
+    # write_surplus_report reads both receipts and the internal audit next to each;
+    # name the offending file when a read fails.
     sealed = _read_json(args.sealed)
     unsealed = _read_json(args.unsealed)
-    out_path = write_surplus_report(args.sealed, args.unsealed, args.out)
-    _write_surplus_jsonl(sealed, unsealed, Path(out_path).with_suffix(".jsonl"))
+    _read_json(audit_path_for(args.sealed))
+    _read_json(audit_path_for(args.unsealed))
+    try:
+        out_path = write_surplus_report(args.sealed, args.unsealed, args.out)
+        sealed_audit = load_internal_audit(args.sealed, sealed)
+        unsealed_audit = load_internal_audit(args.unsealed, unsealed)
+    except ValueError as exc:
+        raise InputError(str(exc))
+    _write_surplus_jsonl(sealed, unsealed, sealed_audit, unsealed_audit, Path(out_path).with_suffix(".jsonl"))
     print(out_path)
     return 0
 

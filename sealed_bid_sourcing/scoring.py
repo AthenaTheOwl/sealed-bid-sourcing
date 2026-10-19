@@ -86,13 +86,29 @@ def score_candidates(candidates: list[dict[str, Any]], weights: dict[str, float]
     return sorted(scored, key=lambda item: (-item["score"], item["runtime_unit_price"], item["supplier_id"]))
 
 
-def build_receipt(scenario: dict[str, Any], runtime: str) -> dict[str, Any]:
+INTERNAL_AUDIT_NAME = "internal_audit.json"
+
+
+def audit_path_for(receipt_path: str | Path) -> Path:
+    """The internal audit file that sits next to a receipt written by write_receipt."""
+    return Path(receipt_path).with_name(INTERNAL_AUDIT_NAME)
+
+
+def build_run(scenario: dict[str, Any], runtime: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Clear every lot and return (receipt, internal_audit).
+
+    The receipt is buyer-facing and carries only what paper/leakage_bounds.yaml
+    allows. Supplier true costs, supplier surplus and the pre-markup bid price are
+    simulator ground truth: they go to the internal audit record, which the
+    surplus analysis reads and the buyer never sees.
+    """
     if runtime not in {"sealed", "unsealed"}:
         raise ValueError("runtime must be sealed or unsealed")
     assert_valid_scenario(scenario)
     suppliers = supplier_index(scenario)
     scenario_digest = scenario_hash(scenario)
     assignments: list[dict[str, Any]] = []
+    audit_assignments: list[dict[str, Any]] = []
     buyer_surplus = 0.0
     supplier_surplus = 0.0
 
@@ -109,9 +125,17 @@ def build_receipt(scenario: dict[str, Any], runtime: str) -> dict[str, Any]:
                     "opened_bid": None,
                     "score": None,
                     "buyer_surplus": 0.0,
+                    "status": "unassigned",
+                }
+            )
+            audit_assignments.append(
+                {
+                    "lot_id": lot["id"],
+                    "supplier_id": None,
+                    "sealed_unit_price": None,
+                    "true_unit_cost": None,
                     "supplier_surplus": 0.0,
                     "total_surplus": 0.0,
-                    "status": "unassigned",
                 }
             )
             continue
@@ -131,17 +155,23 @@ def build_receipt(scenario: dict[str, Any], runtime: str) -> dict[str, Any]:
                 "cleared_unit_price": cleared_unit_price,
                 "opened_bid": {
                     "unit_price": cleared_unit_price,
-                    "sealed_unit_price": winner["unit_price"],
-                    "true_unit_cost": winner["true_unit_cost"],
                     "lead_time_days": winner["lead_time_days"],
                     "esg_score": winner["esg_score"],
                     "quality_score": winner["quality_score"],
                 },
                 "score": winner["score"],
                 "buyer_surplus": lot_buyer_surplus,
+                "status": "assigned",
+            }
+        )
+        audit_assignments.append(
+            {
+                "lot_id": lot["id"],
+                "supplier_id": winner["supplier_id"],
+                "sealed_unit_price": winner["unit_price"],
+                "true_unit_cost": winner["true_unit_cost"],
                 "supplier_surplus": lot_supplier_surplus,
                 "total_surplus": round(lot_buyer_surplus + lot_supplier_surplus, 2),
-                "status": "assigned",
             }
         )
 
@@ -168,8 +198,9 @@ def build_receipt(scenario: dict[str, Any], runtime: str) -> dict[str, Any]:
         if runtime == "sealed"
         else "all submitted bid prices visible to buyer-side baseline"
     )
+    receipt_id = f"{scenario['scenario_id']}-{runtime}-v{RUNTIME_VERSION}"
     receipt = {
-        "receipt_id": f"{scenario['scenario_id']}-{runtime}-v{RUNTIME_VERSION}",
+        "receipt_id": receipt_id,
         "scenario_id": scenario["scenario_id"],
         "scenario_hash": scenario_digest,
         "runtime": runtime,
@@ -180,22 +211,54 @@ def build_receipt(scenario: dict[str, Any], runtime: str) -> dict[str, Any]:
         "assignments": assignments,
         "surplus": {
             "buyer": round(buyer_surplus, 2),
-            "supplier": round(supplier_surplus, 2),
-            "total": round(buyer_surplus + supplier_surplus, 2),
         },
         "leakage_profile": leakage_profile,
     }
     receipt_errors = validate_receipt_data(receipt)
     if receipt_errors:
         raise ValueError("; ".join(receipt_errors))
-    return receipt
+    audit = {
+        "audit_id": f"{receipt_id}-internal",
+        "receipt_ref": receipt_id,
+        "scenario_id": scenario["scenario_id"],
+        "scenario_hash": scenario_digest,
+        "runtime": runtime,
+        "visibility": "internal: simulator ground truth, never part of the buyer-facing receipt",
+        "assignments": audit_assignments,
+        "surplus": {
+            "buyer": round(buyer_surplus, 2),
+            "supplier": round(supplier_surplus, 2),
+            "total": round(buyer_surplus + supplier_surplus, 2),
+        },
+    }
+    return receipt, audit
+
+
+def build_receipt(scenario: dict[str, Any], runtime: str) -> dict[str, Any]:
+    return build_run(scenario, runtime)[0]
+
+
+def build_internal_audit(scenario: dict[str, Any], runtime: str) -> dict[str, Any]:
+    return build_run(scenario, runtime)[1]
+
+
+def load_internal_audit(receipt_path: str | Path, receipt: dict[str, Any]) -> dict[str, Any]:
+    """Load the internal audit next to a receipt and check it describes that receipt."""
+    path = audit_path_for(receipt_path)
+    audit = load_json(path)
+    if audit.get("receipt_ref") != receipt.get("receipt_id") or audit.get("scenario_hash") != receipt.get(
+        "scenario_hash"
+    ):
+        raise ValueError(f"{path} does not belong to receipt {receipt.get('receipt_id')}")
+    return audit
 
 
 def write_receipt(scenario_path: str | Path, runtime: str, out_dir: str | Path) -> Path:
     scenario = load_json(scenario_path)
-    receipt = build_receipt(scenario, runtime)
+    receipt, audit = build_run(scenario, runtime)
     out_path = Path(out_dir) / "receipt.json"
     write_json(out_path, receipt)
+    write_json(audit_path_for(out_path), audit)
     return out_path
 
 
@@ -206,13 +269,18 @@ def write_surplus_report(sealed_path: str | Path, unsealed_path: str | Path, out
         errors = validate_receipt_data(receipt)
         if errors:
             raise ValueError(f"{name} receipt invalid: {'; '.join(errors)}")
+    # Supplier and total surplus need true costs, which the receipts do not carry.
+    sealed_audit = load_internal_audit(sealed_path, sealed)
+    unsealed_audit = load_internal_audit(unsealed_path, unsealed)
 
     delta_buyer = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
-    delta_supplier = round(sealed["surplus"]["supplier"] - unsealed["surplus"]["supplier"], 2)
-    delta_total = round(sealed["surplus"]["total"] - unsealed["surplus"]["total"], 2)
+    delta_supplier = round(sealed_audit["surplus"]["supplier"] - unsealed_audit["surplus"]["supplier"], 2)
+    delta_total = round(sealed_audit["surplus"]["total"] - unsealed_audit["surplus"]["total"], 2)
 
     sealed_by_lot = {assignment["lot_id"]: assignment for assignment in sealed["assignments"]}
     unsealed_by_lot = {assignment["lot_id"]: assignment for assignment in unsealed["assignments"]}
+    sealed_audit_by_lot = {row["lot_id"]: row for row in sealed_audit["assignments"]}
+    unsealed_audit_by_lot = {row["lot_id"]: row for row in unsealed_audit["assignments"]}
     rows = []
     for lot_id in sorted(sealed_by_lot):
         s = sealed_by_lot[lot_id]
@@ -224,7 +292,9 @@ def write_surplus_report(sealed_path: str | Path, unsealed_path: str | Path, out
                 sp=s["cleared_unit_price"],
                 uw=u["supplier_id"],
                 up=u["cleared_unit_price"],
-                dt=round(s["total_surplus"] - u["total_surplus"], 2),
+                dt=round(
+                    sealed_audit_by_lot[lot_id]["total_surplus"] - unsealed_audit_by_lot[lot_id]["total_surplus"], 2
+                ),
             )
         )
 
@@ -246,8 +316,8 @@ def write_surplus_report(sealed_path: str | Path, unsealed_path: str | Path, out
             "",
             "| Runtime | Buyer surplus | Supplier surplus | Total surplus |",
             "|---|---:|---:|---:|",
-            f"| sealed | {sealed['surplus']['buyer']:.2f} | {sealed['surplus']['supplier']:.2f} | {sealed['surplus']['total']:.2f} |",
-            f"| unsealed | {unsealed['surplus']['buyer']:.2f} | {unsealed['surplus']['supplier']:.2f} | {unsealed['surplus']['total']:.2f} |",
+            f"| sealed | {sealed['surplus']['buyer']:.2f} | {sealed_audit['surplus']['supplier']:.2f} | {sealed_audit['surplus']['total']:.2f} |",
+            f"| unsealed | {unsealed['surplus']['buyer']:.2f} | {unsealed_audit['surplus']['supplier']:.2f} | {unsealed_audit['surplus']['total']:.2f} |",
             "",
             "## Assignment Comparison",
             "",
@@ -256,6 +326,7 @@ def write_surplus_report(sealed_path: str | Path, unsealed_path: str | Path, out
             *rows,
             "",
             "The sealed run keeps losing bid values out of the buyer-side receipt.",
+            "Supplier and total surplus come from each run's internal audit file; neither receipt carries true costs.",
             "The unsealed baseline applies the scenario's defensive markups before scoring.",
             "",
         ]

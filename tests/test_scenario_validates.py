@@ -1,13 +1,14 @@
 import copy
-import json
 import shutil
 from pathlib import Path
 
 from sealed_bid_sourcing import (
+    build_internal_audit,
     build_receipt,
     load_json,
     validate_receipt_data,
     validate_scenario_data,
+    write_receipt,
     write_surplus_report,
 )
 from sealed_bid_sourcing.cli import main
@@ -54,7 +55,62 @@ def test_reference_runtimes_emit_valid_receipts() -> None:
     assert sealed["runtime"] == "sealed"
     assert unsealed["runtime"] == "unsealed"
     assert sealed["surplus"]["buyer"] > unsealed["surplus"]["buyer"]
-    assert sealed["surplus"]["total"] >= unsealed["surplus"]["total"]
+    sealed_audit = build_internal_audit(scenario, "sealed")
+    unsealed_audit = build_internal_audit(scenario, "unsealed")
+    assert sealed_audit["surplus"]["total"] >= unsealed_audit["surplus"]["total"]
+
+
+INTERNAL_KEYS = {"true_unit_cost", "sealed_unit_price", "supplier_surplus", "total_surplus"}
+
+
+def _all_keys(value) -> set[str]:
+    if isinstance(value, dict):
+        return set(value).union(*(_all_keys(item) for item in value.values()))
+    if isinstance(value, list):
+        return set().union(*(_all_keys(item) for item in value))
+    return set()
+
+
+def test_receipts_carry_no_true_costs_or_supplier_surplus() -> None:
+    # The buyer-facing receipt must not reveal any supplier's true cost, winners
+    # included. Supplier surplus (margin x quantity) and total surplus give the
+    # winner's cost back from the cleared price, so they stay out too.
+    receipts = [load_json(path) for path in sorted((ROOT / "runs").glob("*/receipt.json"))]
+    assert len(receipts) == 4
+    for scenario_path in [SCENARIO, ROOT / "scenarios" / "v1_20x10.json"]:
+        scenario = load_json(scenario_path)
+        receipts += [build_receipt(scenario, "sealed"), build_receipt(scenario, "unsealed")]
+    for receipt in receipts:
+        assert _all_keys(receipt) & INTERNAL_KEYS == set(), receipt["receipt_id"]
+        assert set(receipt["surplus"]) == {"buyer"}, receipt["receipt_id"]
+
+
+def test_internal_audit_keeps_supplier_side_numbers() -> None:
+    scenario = load_json(SCENARIO)
+    sealed_audit = build_internal_audit(scenario, "sealed")
+    unsealed_audit = build_internal_audit(scenario, "unsealed")
+
+    assert sealed_audit["receipt_ref"] == "v0_10x5-sealed-v0.1.0"
+    assert sealed_audit["surplus"] == {"buyer": 13430.0, "supplier": 5900.0, "total": 19330.0}
+    assert unsealed_audit["surplus"] == {"buyer": 11171.0, "supplier": 7519.0, "total": 18690.0}
+    l1 = sealed_audit["assignments"][0]
+    assert (l1["lot_id"], l1["supplier_id"], l1["true_unit_cost"], l1["supplier_surplus"]) == ("L1", "S07", 10.4, 1040.0)
+    for path in sorted((ROOT / "runs").glob("*/receipt.json")):
+        committed = load_json(path.with_name("internal_audit.json"))
+        assert committed["receipt_ref"] == load_json(path)["receipt_id"]
+
+
+def test_validate_receipt_rejects_internal_fields() -> None:
+    receipt = build_receipt(load_json(SCENARIO), "sealed")
+    leaky = copy.deepcopy(receipt)
+    leaky["assignments"][0]["opened_bid"]["true_unit_cost"] = 10.4
+    leaky["assignments"][1]["supplier_surplus"] = 1200.0
+    leaky["surplus"]["supplier"] = 5900.0
+
+    errors = validate_receipt_data(leaky)
+    assert "assignment true_unit_cost belongs in the internal audit, not the receipt" in errors
+    assert "assignment supplier_surplus belongs in the internal audit, not the receipt" in errors
+    assert "surplus.supplier belongs in the internal audit, not the receipt" in errors
 
 
 def test_sealed_winners_and_surplus_are_pinned() -> None:
@@ -110,21 +166,19 @@ def test_validate_rejects_single_supplier() -> None:
 
 
 def test_surplus_delta_report_is_written() -> None:
-    scenario = load_json(SCENARIO)
     scratch = ROOT / "runs" / "scratch" / "pytest-surplus"
     shutil.rmtree(scratch, ignore_errors=True)
     scratch.mkdir(parents=True, exist_ok=True)
     try:
-        sealed_path = scratch / "sealed.json"
-        unsealed_path = scratch / "unsealed.json"
+        sealed_path = write_receipt(SCENARIO, "sealed", scratch / "sealed")
+        unsealed_path = write_receipt(SCENARIO, "unsealed", scratch / "unsealed")
         report_path = scratch / "surplus_delta.md"
-        sealed_path.write_text(json.dumps(build_receipt(scenario, "sealed")), encoding="utf-8")
-        unsealed_path.write_text(json.dumps(build_receipt(scenario, "unsealed")), encoding="utf-8")
 
         write_surplus_report(sealed_path, unsealed_path, report_path)
 
         report = report_path.read_text(encoding="utf-8")
-        assert "Total surplus delta" in report
+        assert "Total surplus delta: `640.00`" in report
+        assert "| sealed | 13430.00 | 5900.00 | 19330.00 |" in report
         assert "Assignment Comparison" in report
     finally:
         shutil.rmtree(scratch, ignore_errors=True)

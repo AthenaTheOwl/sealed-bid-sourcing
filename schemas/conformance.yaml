@@ -7,6 +7,9 @@ mappings:
   - schema: receipt.schema.json
     files: ["runs/*/receipt.json"]
     records: self
+  - schema: internal_audit.schema.json
+    files: ["runs/*/internal_audit.json"]
+    records: self
   - schema: scenario.schema.json
     files: ["scenarios/*.json"]
     records: self

@@ -28,4 +28,5 @@ Unsealed receipt: `v0_10x5-unsealed-v0.1.0`
 | L5 | S08 | 30.8 | S08 | 31.72 | 0.00 |
 
 The sealed run keeps losing bid values out of the buyer-side receipt.
+Supplier and total surplus come from each run's internal audit file; neither receipt carries true costs.
 The unsealed baseline applies the scenario's defensive markups before scoring.

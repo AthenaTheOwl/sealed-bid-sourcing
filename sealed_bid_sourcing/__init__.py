@@ -7,12 +7,14 @@ from .model import (
     validate_receipt_data,
     validate_scenario_data,
 )
-from .scoring import build_receipt, write_receipt, write_surplus_report
+from .scoring import build_internal_audit, build_receipt, build_run, write_receipt, write_surplus_report
 from .cli import lot_comparison
 
 __all__ = [
     "RUNTIME_VERSION",
+    "build_internal_audit",
     "build_receipt",
+    "build_run",
     "load_json",
     "lot_comparison",
     "scenario_hash",

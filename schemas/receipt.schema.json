@@ -92,8 +92,6 @@
         "opened_bid",
         "score",
         "buyer_surplus",
-        "supplier_surplus",
-        "total_surplus",
         "status"
       ],
       "properties": {
@@ -116,9 +114,13 @@
           ]
         },
         "opened_bid": {
-          "type": [
-            "object",
-            "null"
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/opened_bid"
+            }
           ]
         },
         "score": {
@@ -130,12 +132,6 @@
         "buyer_surplus": {
           "type": "number"
         },
-        "supplier_surplus": {
-          "type": "number"
-        },
-        "total_surplus": {
-          "type": "number"
-        },
         "status": {
           "type": "string",
           "enum": [
@@ -145,22 +141,40 @@
         }
       }
     },
-    "surplus": {
+    "opened_bid": {
       "type": "object",
+      "description": "The winning bid as opened to the buyer. Supplier true cost and the pre-markup price are not part of it; they live in the run's internal_audit.json.",
       "additionalProperties": false,
       "required": [
-        "buyer",
-        "supplier",
-        "total"
+        "unit_price",
+        "lead_time_days",
+        "esg_score",
+        "quality_score"
+      ],
+      "properties": {
+        "unit_price": {
+          "type": "number"
+        },
+        "lead_time_days": {
+          "type": "number"
+        },
+        "esg_score": {
+          "type": "number"
+        },
+        "quality_score": {
+          "type": "number"
+        }
+      }
+    },
+    "surplus": {
+      "type": "object",
+      "description": "Buyer surplus only. Supplier and total surplus reveal winners' true costs and live in the run's internal_audit.json.",
+      "additionalProperties": false,
+      "required": [
+        "buyer"
       ],
       "properties": {
         "buyer": {
-          "type": "number"
-        },
-        "supplier": {
-          "type": "number"
-        },
-        "total": {
           "type": "number"
         }
       }
