@@ -158,6 +158,17 @@ def test_validate_rejects_out_of_range_markup() -> None:
     assert f"supplier {sid} defensive_markup_pct must be between 0 and 1" in errors
 
 
+def test_validate_rejects_an_auction_rule_the_runtime_does_not_implement() -> None:
+    # build_receipt always clears at the winner's own bid, so a vickrey-sealed
+    # scenario would emit a receipt naming a rule that never ran.
+    scenario = load_json(SCENARIO)
+    bad = copy.deepcopy(scenario)
+    bad["auction_rule"] = "vickrey-sealed"
+
+    errors = validate_scenario_data(bad)
+    assert "auction_rule must be first-price-sealed (the only rule the runtime implements)" in errors
+
+
 def test_validate_rejects_single_supplier() -> None:
     scenario = load_json(SCENARIO)
     bad = copy.deepcopy(scenario)

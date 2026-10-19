@@ -45,8 +45,10 @@ def validate_scenario_data(scenario: dict[str, Any]) -> list[str]:
         errors.append(f"missing root fields: {', '.join(missing)}")
         return errors
 
-    if scenario["auction_rule"] not in {"first-price-sealed", "vickrey-sealed"}:
-        errors.append("auction_rule must be first-price-sealed or vickrey-sealed")
+    # The runtime clears every lot at the winner's own bid. A rule it does not
+    # implement must not validate, or the receipt would name a rule that never ran.
+    if scenario["auction_rule"] not in {"first-price-sealed"}:
+        errors.append("auction_rule must be first-price-sealed (the only rule the runtime implements)")
 
     suppliers = scenario.get("suppliers", [])
     lots = scenario.get("lots", [])

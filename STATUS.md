@@ -13,6 +13,9 @@
 
 - The sealed runtime is reference-grade and does not implement production MPC.
 - The unsealed baseline uses fixed defensive markup values from the scenario.
+- Only `first-price-sealed` clears. The `vickrey-sealed` label was accepted by
+  validation without an implementation and has been removed, so the optional
+  Vickrey selection in R-SBS-001 is not met.
 - The paper is a skeleton and cites the primitive family, not a full proof.
 - The benchmark has one canonical 10x5 case and no generated scenario suite.
 
