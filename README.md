@@ -154,10 +154,10 @@ sealed-bid-sourcing/
   STATUS.md
 ```
 
-## License
-
-MIT. See [LICENSE](LICENSE).
-
 ## Method update
 
 [October method update: A modeled markup difference is a conditional result](docs/surplus-and-disclosure-experiment.md).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
