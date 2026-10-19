@@ -18,10 +18,15 @@ envelope.
 sealed-bid-sourcing runs two matched benchmarks both ways: a ten-supplier, five-lot
 case and a twenty-supplier, ten-lot case. It reports the surplus delta for each.
 The sealed runtime's receipt exposes a fixed
-list of fields and nothing else: scenario hash, winner ids, opened winning bids,
-per-lot scores, commitment hashes. A gate (`scripts/validate_leakage_bound.py`)
-fails the build if a field outside that list shows up. The losing bids are
-disallowed leakage, and the test enforces it.
+list of fields and nothing else: scenario hash, winner ids, opened winning bids
+(price, lead time, ESG and quality, never cost), per-lot scores, commitment
+hashes, plus the buyer's own lot terms and buyer surplus. A gate
+(`scripts/validate_leakage_bound.py`, run in CI) opens every receipt under `runs/`
+and fails the build if a field shows up that `paper/leakage_bounds.yaml` does not
+map to allowed leakage. Losing bids, every supplier's true cost and supplier
+surplus are disallowed leakage. The surplus report still needs the last two, so
+they sit in an `internal_audit.json` next to each receipt, outside what the buyer
+sees.
 
 v0.1 is a reference benchmark, not production MPC. The sealed scorer stands in for
 the secret-sharing and PSI primitives it cites; the receipt schema is the part
@@ -98,6 +103,7 @@ python -m uv run pytest
 python -m uv run python scripts/voice_lint.py paper/ README.md
 python -m uv run python scripts/validate_schemas.py schemas/ scenarios/ runs/
 python -m uv run python scripts/validate_leakage_bound.py paper/leakage_bounds.yaml --runtime sealed
+python -m uv run python scripts/validate_leakage_bound.py paper/leakage_bounds.yaml --runtime unsealed
 python -m uv run python -m sealed_bid_sourcing validate scenarios/v0_10x5.json
 python -m uv run python -m sealed_bid_sourcing validate scenarios/v1_20x10.json
 ```
