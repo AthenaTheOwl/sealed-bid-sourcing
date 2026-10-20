@@ -1,6 +1,7 @@
 """sealed-bid sourcing: sealed vs unsealed surplus browser.
 
-reads the committed receipts under runs/ directly. no network, no secrets.
+reads the committed receipts and internal audit files under runs/ directly.
+no network, no secrets.
 """
 from __future__ import annotations
 
@@ -38,7 +39,7 @@ sealed_audit = load(SEALED_AUDIT)
 unsealed_audit = load(UNSEALED_AUDIT)
 if sealed is None or unsealed is None or sealed_audit is None or unsealed_audit is None:
     st.warning(
-        "committed receipts not found under runs/. generate them with "
+        "committed receipts or internal audit files not found under runs/. generate them with "
         "`python -m sealed_bid_sourcing run ...` and commit the output."
     )
     st.stop()
@@ -85,7 +86,9 @@ st.dataframe(shown, use_container_width=True)
 
 top = df.iloc[0]
 st.info(
-    f"sealing bids returns +{buyer_delta:,.0f} buyer surplus versus the unsealed markup baseline. "
+    f"under the assumed defensive markups, the sealed run keeps {buyer_delta:+,.0f} buyer surplus over the "
+    f"unsealed baseline. this is a modeled result: with every markup at 0 the two runtimes clear the same way "
+    f"(try the markup multiplier below). "
     f"the biggest single-lot gain is {top['lot']}: +{top['buyer surplus gain']:,.0f} buyer surplus, "
     f"where unsealed defensive markups raise the cleared price from "
     f"{top['sealed price']:.2f} to {top['unsealed price']:.2f}."
@@ -237,6 +240,6 @@ except Exception as exc:  # pragma: no cover - defensive for cloud import differ
 
 st.caption(
     "the clearing + surplus logic lives in `sealed_bid_sourcing/scoring.py`; the top table reads the "
-    "committed `runs/*/receipt.json`, and the controls above are the real engine re-running on your edits. "
+    "committed `runs/*/receipt.json` and `runs/*/internal_audit.json`, and the controls above are the real engine re-running on your edits. "
     "repo: github.com/AthenaTheOwl/sealed-bid-sourcing"
 )

@@ -70,12 +70,14 @@ L5   S08            30.80  S08              31.72        368.00
 L2   S08            18.80  S08              19.36        280.00
 L3   S08            23.90  S02              24.13        138.00
 
-headline: sealing bids returns +2,259.00 buyer surplus vs the unsealed markup baseline (total surplus delta +640.00).
+headline: under the assumed defensive markups, the sealed run keeps +2,259.00 buyer surplus over the unsealed baseline (total surplus delta +640.00).
+          a modeled result: the zero-markup control in the surplus-delta report shows how much of it the markup produces.
           biggest single-lot gain is L4: +777.00 buyer surplus, where unsealed defensive markups push the cleared price from 9.50 to 10.61.
 ```
 
-Ranked by buyer gain, biggest recovered surplus first. It reads the committed
-receipts under `runs/` — offline, read-only.
+Ranked by buyer gain under the modeled markups, biggest first. It reads the
+committed receipts under `runs/` and the `internal_audit.json` next to each —
+offline, read-only.
 
 ## Live demo
 
@@ -86,7 +88,8 @@ pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
-Both read the committed receipts under `runs/` directly (offline, read-only).
+Both read the committed receipts and internal audit files under `runs/`
+directly (offline, read-only).
 
 deploy on Streamlit Cloud: repo `AthenaTheOwl/sealed-bid-sourcing`, branch `main`,
 main file `streamlit_app.py`.
@@ -98,8 +101,8 @@ main file `streamlit_app.py`.
 The procurement cluster works the same supplier graph from different angles:
 
 - [procurement-negotiation-lab](https://github.com/AthenaTheOwl/procurement-negotiation-lab)
-  — the surplus left on the table when two parties fail to coordinate a deal, the
-  same gap this repo closes by sealing the bids.
+  — the surplus left on the table when two parties fail to coordinate a deal, a
+  relative of the modeled markup gap this repo measures.
 - [procurement-pattern-library](https://github.com/AthenaTheOwl/procurement-pattern-library)
   — the recurring single-source and fallback shapes that make a sealed auction
   worth running in the first place.
@@ -159,13 +162,14 @@ sealed-bid-sourcing/
   schemas/
     scenario.schema.json
     receipt.schema.json
+    internal_audit.schema.json
   scenarios/
     v0_10x5.json
     v1_20x10.json
   src/sealed_bid_sourcing/
   scripts/
   tests/
-  runs/
+  runs/          # <run>/receipt.json (buyer-facing) + <run>/internal_audit.json
   reports/
   paper/
   decisions/

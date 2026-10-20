@@ -47,6 +47,9 @@ def test_show_prints_ranked_comparison(capsys) -> None:
     assert out.index("L1") < out.index("L5")
     # headline reports the committed buyer-surplus delta
     assert "+2,259.00 buyer surplus" in out
+    # the gain is stated as conditional on the assumed markups, as in the README lead
+    assert "under the assumed defensive markups" in out
+    assert "zero-markup control" in out
 
 
 def test_reference_runtimes_emit_valid_receipts() -> None:

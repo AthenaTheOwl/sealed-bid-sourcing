@@ -119,8 +119,12 @@ def _cmd_show(args: argparse.Namespace) -> int:
         print()
     top = rows[0]
     print(
-        f"headline: sealing bids returns +{buyer_delta:,.2f} buyer surplus vs the unsealed "
-        f"markup baseline (total surplus delta +{total_delta:,.2f})."
+        f"headline: under the assumed defensive markups, the sealed run keeps {buyer_delta:+,.2f} buyer surplus "
+        f"over the unsealed baseline (total surplus delta {total_delta:+,.2f})."
+    )
+    print(
+        "          a modeled result: the zero-markup control in the surplus-delta report shows "
+        "how much of it the markup produces."
     )
     if top["sealed_price"] is None or top["unsealed_price"] is None:
         reason = "where one runtime leaves the lot unassigned."

@@ -11,12 +11,15 @@ sealed_bid_sourcing/cli.py
         +-- run --runtime sealed           v
         |                         schemas/scenario.schema.json
         |                         schemas/receipt.schema.json
+        |                         schemas/internal_audit.schema.json
         |
         +-- run --runtime unsealed
         |
         v
-runs/sealed_v0/receipt.json
+runs/sealed_v0/receipt.json          (buyer-facing)
+runs/sealed_v0/internal_audit.json   (true costs, supplier surplus)
 runs/unsealed_v0/receipt.json
+runs/unsealed_v0/internal_audit.json
         |
         v
 reports/surplus_delta.md
