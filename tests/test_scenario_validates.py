@@ -308,3 +308,11 @@ def test_scenario_schema_rejects_vickrey_sealed() -> None:
     bad["auction_rule"] = "vickrey-sealed"
     errors = list(validator.iter_errors(bad))
     assert any(list(error.path) == ["auction_rule"] for error in errors)
+
+
+def test_validate_receipt_rejects_a_scalar_opened_bid() -> None:
+    receipt = load_json(ROOT / "runs" / "sealed_v0" / "receipt.json")
+    bad = copy.deepcopy(receipt)
+    bad["assignments"][1]["opened_bid"] = "S08 true cost 16.90"
+
+    assert "assignment L2 opened_bid must be an object or null" in validate_receipt_data(bad)

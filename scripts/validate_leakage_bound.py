@@ -52,11 +52,15 @@ def check_receipt(
     if receipt.get("runtime") != runtime:
         return [f"{receipt_path}: receipt is for runtime {receipt.get('runtime')!r}, gate was run for {runtime!r}"]
     errors: list[str] = []
-    seen: set[str] = set()
+    # Check every leaf, not just the first value seen at each path: an unassigned
+    # lot's null opened_bid must not wave through a later lot's leaked value.
+    # Dedupe on (path, empty-or-not) to keep the work and the report small.
+    seen: set[tuple[str, bool]] = set()
     for path, value in iter_leaf_paths(receipt):
-        if path in seen:
+        key = (path, value is None or value == {} or value == [])
+        if key in seen:
             continue
-        seen.add(path)
+        seen.add(key)
         if not is_declared(path, value, receipt_fields):
             errors.append(f"{receipt_path}: field {path} is not declared under receipt_fields")
             continue
@@ -67,7 +71,7 @@ def check_receipt(
             errors.append(f"{receipt_path}: field {path} is disallowed leakage ({category})")
         elif category not in allowed:
             errors.append(f"{receipt_path}: field {path} leaks {category}, which is not in allowed_leakage")
-    return errors
+    return list(dict.fromkeys(errors))
 
 
 def main(argv: list[str] | None = None) -> int:

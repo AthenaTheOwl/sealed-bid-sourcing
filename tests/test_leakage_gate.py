@@ -84,3 +84,18 @@ def test_gate_accepts_an_unassigned_lot(tmp_path) -> None:
     path = _write(tmp_path / "receipt.json", unassigned)
 
     assert _gate().main([str(BOUNDS), "--runtime", "sealed", "--receipts", str(path)]) == 0
+
+
+def test_gate_checks_a_value_after_an_unassigned_lot(tmp_path, capsys) -> None:
+    # An unassigned lot's null opened_bid comes first; a later scalar opened_bid
+    # must still be checked rather than skipped as an already-seen path.
+    receipt = json.loads(SEALED_RECEIPT.read_text(encoding="utf-8"))
+    leaky = copy.deepcopy(receipt)
+    leaky["assignments"][0].update(
+        {"supplier_id": None, "cleared_unit_price": None, "opened_bid": None, "score": None, "status": "unassigned"}
+    )
+    leaky["assignments"][1]["opened_bid"] = "S08 true cost 16.90"
+    path = _write(tmp_path / "receipt.json", leaky)
+
+    assert _gate().main([str(BOUNDS), "--runtime", "sealed", "--receipts", str(path)]) == 1
+    assert "field assignments[].opened_bid is not declared" in capsys.readouterr().out

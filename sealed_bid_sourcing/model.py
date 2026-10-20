@@ -169,7 +169,11 @@ def validate_receipt_data(receipt: dict[str, Any]) -> list[str]:
         for field in ["lot_id", "supplier_id", "quantity", "cleared_unit_price", "opened_bid", "score"]:
             if field not in assignment:
                 errors.append(f"assignment missing {field}")
-        opened_bid = assignment.get("opened_bid") or {}
+        opened_bid = assignment.get("opened_bid")
+        if opened_bid is not None and not isinstance(opened_bid, dict):
+            errors.append(f"assignment {assignment.get('lot_id')} opened_bid must be an object or null")
+            opened_bid = {}
+        opened_bid = opened_bid or {}
         for field in sorted((set(assignment) | set(opened_bid)) & INTERNAL_AUDIT_FIELDS):
             errors.append(f"assignment {field} belongs in the internal audit, not the receipt")
     return errors
