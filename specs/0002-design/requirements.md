@@ -19,5 +19,6 @@ Brand prefix: SBS.
   the emitted receipt.
 - **R-SBS-018** - The unsealed baseline SHALL score the same bids after applying
   supplier defensive markup.
-- **R-SBS-019** - The surplus report SHALL compute buyer, supplier, and total
-  surplus deltas from receipt files.
+- **R-SBS-019** - The surplus report SHALL compute buyer surplus deltas from
+  the receipt files and supplier and total surplus deltas from each run's
+  `internal_audit.json`.
