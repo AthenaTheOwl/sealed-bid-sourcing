@@ -64,14 +64,23 @@ def lot_comparison(sealed: dict, unsealed: dict) -> list[dict]:
 def _cmd_show(args: argparse.Namespace) -> int:
     sealed_path = Path(args.sealed)
     unsealed_path = Path(args.unsealed)
-    run_files = [sealed_path, unsealed_path, audit_path_for(sealed_path), audit_path_for(unsealed_path)]
-    if not all(path.exists() for path in run_files):
+    if not (sealed_path.exists() and unsealed_path.exists()):
         print("ERROR: committed receipts not found under runs/. run the sealed/unsealed runtimes first.")
         return 1
-    sealed = load_json(sealed_path)
-    unsealed = load_json(unsealed_path)
-    sealed_audit = load_internal_audit(sealed_path, sealed)
-    unsealed_audit = load_internal_audit(unsealed_path, unsealed)
+    missing_audits = [str(p) for p in (audit_path_for(sealed_path), audit_path_for(unsealed_path)) if not p.exists()]
+    if missing_audits:
+        print(
+            f"ERROR: internal audit file not found: {', '.join(missing_audits)}. "
+            "re-run the sealed/unsealed runtimes to write it next to the receipt."
+        )
+        return 1
+    sealed = _read_json(sealed_path)
+    unsealed = _read_json(unsealed_path)
+    try:
+        sealed_audit = load_internal_audit(sealed_path, sealed)
+        unsealed_audit = load_internal_audit(unsealed_path, unsealed)
+    except ValueError as exc:
+        raise InputError(str(exc))
 
     buyer_delta = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
     total_delta = round(sealed_audit["surplus"]["total"] - unsealed_audit["surplus"]["total"], 2)

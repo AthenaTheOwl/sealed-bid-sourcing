@@ -269,3 +269,26 @@ def test_cli_validate_bad_json_reports_clean_error(tmp_path, capsys) -> None:
 
     err = capsys.readouterr().err
     assert "invalid JSON" in err
+
+
+def test_show_reports_a_mismatched_internal_audit_cleanly(tmp_path, capsys) -> None:
+    run_dir = tmp_path / "sealed"
+    run_dir.mkdir()
+    shutil.copy(ROOT / "runs" / "sealed_v0" / "receipt.json", run_dir / "receipt.json")
+    shutil.copy(ROOT / "runs" / "sealed_v1" / "internal_audit.json", run_dir / "internal_audit.json")
+
+    assert main(
+        ["show", "--sealed", str(run_dir / "receipt.json"), "--unsealed", str(ROOT / "runs" / "unsealed_v0" / "receipt.json")]
+    ) == 1
+    assert "does not belong to receipt" in capsys.readouterr().err
+
+
+def test_show_names_a_missing_internal_audit(tmp_path, capsys) -> None:
+    run_dir = tmp_path / "sealed"
+    run_dir.mkdir()
+    shutil.copy(ROOT / "runs" / "sealed_v0" / "receipt.json", run_dir / "receipt.json")
+
+    assert main(
+        ["show", "--sealed", str(run_dir / "receipt.json"), "--unsealed", str(ROOT / "runs" / "unsealed_v0" / "receipt.json")]
+    ) == 1
+    assert "internal audit file not found" in capsys.readouterr().out
