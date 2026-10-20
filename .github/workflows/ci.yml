@@ -43,3 +43,7 @@ jobs:
           PY
       - name: validate_data_conformance
         run: python -m uv run python scripts/validate_data_conformance.py
+      - name: leakage gate
+        run: |
+          python -m uv run python scripts/validate_leakage_bound.py paper/leakage_bounds.yaml --runtime sealed
+          python -m uv run python scripts/validate_leakage_bound.py paper/leakage_bounds.yaml --runtime unsealed

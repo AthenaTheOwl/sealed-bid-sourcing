@@ -1,6 +1,7 @@
 """sealed-bid sourcing: sealed vs unsealed surplus browser.
 
-reads the committed receipts under runs/ directly. no network, no secrets.
+reads the committed receipts and internal audit files under runs/ directly.
+no network, no secrets.
 """
 from __future__ import annotations
 
@@ -13,6 +14,10 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parent
 SEALED = ROOT / "runs" / "sealed_v0" / "receipt.json"
 UNSEALED = ROOT / "runs" / "unsealed_v0" / "receipt.json"
+# supplier and total surplus need true costs, which the buyer-facing receipts do not
+# carry; they come from the internal audit file written next to each receipt.
+SEALED_AUDIT = SEALED.with_name("internal_audit.json")
+UNSEALED_AUDIT = UNSEALED.with_name("internal_audit.json")
 
 
 def load(path: Path) -> dict | None:
@@ -30,16 +35,18 @@ st.caption(
 
 sealed = load(SEALED)
 unsealed = load(UNSEALED)
-if sealed is None or unsealed is None:
+sealed_audit = load(SEALED_AUDIT)
+unsealed_audit = load(UNSEALED_AUDIT)
+if sealed is None or unsealed is None or sealed_audit is None or unsealed_audit is None:
     st.warning(
-        "committed receipts not found under runs/. generate them with "
+        "committed receipts or internal audit files not found under runs/. generate them with "
         "`python -m sealed_bid_sourcing run ...` and commit the output."
     )
     st.stop()
 
 buyer_delta = round(sealed["surplus"]["buyer"] - unsealed["surplus"]["buyer"], 2)
-supplier_delta = round(sealed["surplus"]["supplier"] - unsealed["surplus"]["supplier"], 2)
-total_delta = round(sealed["surplus"]["total"] - unsealed["surplus"]["total"], 2)
+supplier_delta = round(sealed_audit["surplus"]["supplier"] - unsealed_audit["surplus"]["supplier"], 2)
+total_delta = round(sealed_audit["surplus"]["total"] - unsealed_audit["surplus"]["total"], 2)
 
 c1, c2, c3 = st.columns(3)
 c1.metric("buyer surplus gain (sealed - unsealed)", f"{buyer_delta:,.0f}")
@@ -48,6 +55,8 @@ c3.metric("total surplus delta", f"{total_delta:,.0f}")
 
 sealed_by_lot = {a["lot_id"]: a for a in sealed["assignments"]}
 unsealed_by_lot = {a["lot_id"]: a for a in unsealed["assignments"]}
+sealed_audit_by_lot = {a["lot_id"]: a for a in sealed_audit["assignments"]}
+unsealed_audit_by_lot = {a["lot_id"]: a for a in unsealed_audit["assignments"]}
 rows = []
 for lot_id in sorted(sealed_by_lot):
     s = sealed_by_lot[lot_id]
@@ -60,7 +69,9 @@ for lot_id in sorted(sealed_by_lot):
             "unsealed winner": u["supplier_id"],
             "unsealed price": u["cleared_unit_price"],
             "buyer surplus gain": round(s["buyer_surplus"] - u["buyer_surplus"], 2),
-            "total surplus delta": round(s["total_surplus"] - u["total_surplus"], 2),
+            "total surplus delta": round(
+                sealed_audit_by_lot[lot_id]["total_surplus"] - unsealed_audit_by_lot[lot_id]["total_surplus"], 2
+            ),
         }
     )
 df = pd.DataFrame(rows).sort_values("buyer surplus gain", ascending=False).reset_index(drop=True)
@@ -75,7 +86,9 @@ st.dataframe(shown, use_container_width=True)
 
 top = df.iloc[0]
 st.info(
-    f"sealing bids returns +{buyer_delta:,.0f} buyer surplus versus the unsealed markup baseline. "
+    f"under the assumed defensive markups, the sealed run keeps {buyer_delta:+,.0f} buyer surplus over the "
+    f"unsealed baseline. this is a modeled result: with every markup at 0 the two runtimes clear the same way "
+    f"(try the markup multiplier below). "
     f"the biggest single-lot gain is {top['lot']}: +{top['buyer surplus gain']:,.0f} buyer surplus, "
     f"where unsealed defensive markups raise the cleared price from "
     f"{top['sealed price']:.2f} to {top['unsealed price']:.2f}."
@@ -83,7 +96,7 @@ st.info(
 
 # ---------------------------------------------------------------------------
 # Run the real sourcing engine live. The committed table above reads frozen
-# receipts; the controls below call sealed_bid_sourcing.scoring.build_receipt
+# receipts; the controls below call sealed_bid_sourcing.scoring.build_run
 # — the same function that produced those receipts — on a scenario you edit.
 # Change a lot's scoring weights or the suppliers' defensive markups and watch
 # the winners, cleared prices and surplus delta recompute. Not a lookup.
@@ -91,7 +104,7 @@ st.info(
 st.divider()
 st.subheader("run the auction yourself")
 st.caption(
-    "drive the actual clearing engine — `sealed_bid_sourcing.scoring.build_receipt` — "
+    "drive the actual clearing engine — `sealed_bid_sourcing.scoring.build_run` — "
     "on a scenario you edit. it re-runs the sealed and unsealed runtimes and recomputes "
     "every winner, cleared price and surplus number live."
 )
@@ -102,7 +115,7 @@ try:
 
     sys.path.insert(0, str(ROOT))
     from sealed_bid_sourcing.model import HIGHER_IS_BETTER, validate_scenario_data
-    from sealed_bid_sourcing.scoring import build_receipt
+    from sealed_bid_sourcing.scoring import build_run
 
     base_scenario = json.loads((ROOT / "scenarios" / "v0_10x5.json").read_text(encoding="utf-8"))
 
@@ -174,11 +187,11 @@ try:
         if errors:
             st.error("edited scenario is invalid: " + "; ".join(errors))
         else:
-            sealed_r = build_receipt(edited, "sealed")
-            unsealed_r = build_receipt(edited, "unsealed")
+            sealed_r, sealed_a = build_run(edited, "sealed")
+            unsealed_r, unsealed_a = build_run(edited, "unsealed")
 
             d_buyer = round(sealed_r["surplus"]["buyer"] - unsealed_r["surplus"]["buyer"], 2)
-            d_total = round(sealed_r["surplus"]["total"] - unsealed_r["surplus"]["total"], 2)
+            d_total = round(sealed_a["surplus"]["total"] - unsealed_a["surplus"]["total"], 2)
 
             st.markdown(f"**normalized weights for {sel_lot_id}:** " + ", ".join(f"{k} {v}" for k, v in new_weights.items()))
 
@@ -220,13 +233,13 @@ try:
                 )
             st.caption(
                 f"receipt ids recomputed live: `{sealed_r['receipt_id']}` / `{unsealed_r['receipt_id']}` — "
-                "both produced by build_receipt on your edited scenario."
+                "both produced by build_run on your edited scenario."
             )
 except Exception as exc:  # pragma: no cover - defensive for cloud import differences
     st.info(f"interactive auction needs the package importable ({exc}). the committed comparison above still renders.")
 
 st.caption(
     "the clearing + surplus logic lives in `sealed_bid_sourcing/scoring.py`; the top table reads the "
-    "committed `runs/*/receipt.json`, and the controls above are the real engine re-running on your edits. "
+    "committed `runs/*/receipt.json` and `runs/*/internal_audit.json`, and the controls above are the real engine re-running on your edits. "
     "repo: github.com/AthenaTheOwl/sealed-bid-sourcing"
 )

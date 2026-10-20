@@ -4,17 +4,22 @@ import shutil
 from pathlib import Path
 
 from sealed_bid_sourcing import (
+    build_internal_audit,
     build_receipt,
     load_json,
     validate_receipt_data,
     validate_scenario_data,
+    write_receipt,
     write_surplus_report,
 )
 from sealed_bid_sourcing.cli import main
+from sealed_bid_sourcing.scoring import zero_markup_control
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO = ROOT / "scenarios" / "v0_10x5.json"
+# The committed runs, named so a local run under the gitignored runs/scratch/ does not change the tests.
+COMMITTED_RECEIPTS = [ROOT / "runs" / name / "receipt.json" for name in ("sealed_v0", "unsealed_v0", "sealed_v1", "unsealed_v1")]
 
 
 def test_canonical_scenario_validates() -> None:
@@ -42,6 +47,9 @@ def test_show_prints_ranked_comparison(capsys) -> None:
     assert out.index("L1") < out.index("L5")
     # headline reports the committed buyer-surplus delta
     assert "+2,259.00 buyer surplus" in out
+    # the gain is stated as conditional on the assumed markups, as in the README lead
+    assert "under the assumed defensive markups" in out
+    assert "zero-markup control" in out
 
 
 def test_reference_runtimes_emit_valid_receipts() -> None:
@@ -54,7 +62,61 @@ def test_reference_runtimes_emit_valid_receipts() -> None:
     assert sealed["runtime"] == "sealed"
     assert unsealed["runtime"] == "unsealed"
     assert sealed["surplus"]["buyer"] > unsealed["surplus"]["buyer"]
-    assert sealed["surplus"]["total"] >= unsealed["surplus"]["total"]
+    sealed_audit = build_internal_audit(scenario, "sealed")
+    unsealed_audit = build_internal_audit(scenario, "unsealed")
+    assert sealed_audit["surplus"]["total"] >= unsealed_audit["surplus"]["total"]
+
+
+INTERNAL_KEYS = {"true_unit_cost", "sealed_unit_price", "supplier_surplus", "total_surplus"}
+
+
+def _all_keys(value) -> set[str]:
+    if isinstance(value, dict):
+        return set(value).union(*(_all_keys(item) for item in value.values()))
+    if isinstance(value, list):
+        return set().union(*(_all_keys(item) for item in value))
+    return set()
+
+
+def test_receipts_carry_no_true_costs_or_supplier_surplus() -> None:
+    # The buyer-facing receipt must not reveal any supplier's true cost, winners
+    # included. Supplier surplus (margin x quantity) and total surplus give the
+    # winner's cost back from the cleared price, so they stay out too.
+    receipts = [load_json(path) for path in COMMITTED_RECEIPTS]
+    for scenario_path in [SCENARIO, ROOT / "scenarios" / "v1_20x10.json"]:
+        scenario = load_json(scenario_path)
+        receipts += [build_receipt(scenario, "sealed"), build_receipt(scenario, "unsealed")]
+    for receipt in receipts:
+        assert _all_keys(receipt) & INTERNAL_KEYS == set(), receipt["receipt_id"]
+        assert set(receipt["surplus"]) == {"buyer"}, receipt["receipt_id"]
+
+
+def test_internal_audit_keeps_supplier_side_numbers() -> None:
+    scenario = load_json(SCENARIO)
+    sealed_audit = build_internal_audit(scenario, "sealed")
+    unsealed_audit = build_internal_audit(scenario, "unsealed")
+
+    assert sealed_audit["receipt_ref"] == "v0_10x5-sealed-v0.1.0"
+    assert sealed_audit["surplus"] == {"buyer": 13430.0, "supplier": 5900.0, "total": 19330.0}
+    assert unsealed_audit["surplus"] == {"buyer": 11171.0, "supplier": 7519.0, "total": 18690.0}
+    l1 = sealed_audit["assignments"][0]
+    assert (l1["lot_id"], l1["supplier_id"], l1["true_unit_cost"], l1["supplier_surplus"]) == ("L1", "S07", 10.4, 1040.0)
+    for path in COMMITTED_RECEIPTS:
+        committed = load_json(path.with_name("internal_audit.json"))
+        assert committed["receipt_ref"] == load_json(path)["receipt_id"]
+
+
+def test_validate_receipt_rejects_internal_fields() -> None:
+    receipt = build_receipt(load_json(SCENARIO), "sealed")
+    leaky = copy.deepcopy(receipt)
+    leaky["assignments"][0]["opened_bid"]["true_unit_cost"] = 10.4
+    leaky["assignments"][1]["supplier_surplus"] = 1200.0
+    leaky["surplus"]["supplier"] = 5900.0
+
+    errors = validate_receipt_data(leaky)
+    assert "assignment true_unit_cost belongs in the internal audit, not the receipt" in errors
+    assert "assignment supplier_surplus belongs in the internal audit, not the receipt" in errors
+    assert "surplus.supplier belongs in the internal audit, not the receipt" in errors
 
 
 def test_sealed_winners_and_surplus_are_pinned() -> None:
@@ -100,6 +162,17 @@ def test_validate_rejects_out_of_range_markup() -> None:
     assert f"supplier {sid} defensive_markup_pct must be between 0 and 1" in errors
 
 
+def test_validate_rejects_an_auction_rule_the_runtime_does_not_implement() -> None:
+    # build_receipt always clears at the winner's own bid, so a vickrey-sealed
+    # scenario would emit a receipt naming a rule that never ran.
+    scenario = load_json(SCENARIO)
+    bad = copy.deepcopy(scenario)
+    bad["auction_rule"] = "vickrey-sealed"
+
+    errors = validate_scenario_data(bad)
+    assert "auction_rule must be first-price-sealed (the only rule the runtime implements)" in errors
+
+
 def test_validate_rejects_single_supplier() -> None:
     scenario = load_json(SCENARIO)
     bad = copy.deepcopy(scenario)
@@ -110,24 +183,79 @@ def test_validate_rejects_single_supplier() -> None:
 
 
 def test_surplus_delta_report_is_written() -> None:
-    scenario = load_json(SCENARIO)
     scratch = ROOT / "runs" / "scratch" / "pytest-surplus"
     shutil.rmtree(scratch, ignore_errors=True)
     scratch.mkdir(parents=True, exist_ok=True)
     try:
-        sealed_path = scratch / "sealed.json"
-        unsealed_path = scratch / "unsealed.json"
+        sealed_path = write_receipt(SCENARIO, "sealed", scratch / "sealed")
+        unsealed_path = write_receipt(SCENARIO, "unsealed", scratch / "unsealed")
         report_path = scratch / "surplus_delta.md"
-        sealed_path.write_text(json.dumps(build_receipt(scenario, "sealed")), encoding="utf-8")
-        unsealed_path.write_text(json.dumps(build_receipt(scenario, "unsealed")), encoding="utf-8")
 
-        write_surplus_report(sealed_path, unsealed_path, report_path)
+        write_surplus_report(sealed_path, unsealed_path, report_path, SCENARIO)
 
         report = report_path.read_text(encoding="utf-8")
-        assert "Total surplus delta" in report
+        assert "Total surplus delta: `640.00`" in report
+        assert "| sealed | 13430.00 | 5900.00 | 19330.00 |" in report
         assert "Assignment Comparison" in report
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
+
+
+def test_zero_markup_control_closes_the_gap() -> None:
+    # The only sealed/unsealed difference is the markup the unsealed runtime adds
+    # before scoring, so with zero markup the reported delta must vanish.
+    for scenario_path in [SCENARIO, ROOT / "scenarios" / "v1_20x10.json"]:
+        scenario = load_json(scenario_path)
+        assert zero_markup_control(scenario) == {"buyer": 0.0, "supplier": 0.0, "total": 0.0}
+
+
+def test_surplus_report_carries_zero_markup_control(tmp_path) -> None:
+    sealed_path = write_receipt(SCENARIO, "sealed", tmp_path / "sealed")
+    unsealed_path = write_receipt(SCENARIO, "unsealed", tmp_path / "unsealed")
+    report_path = tmp_path / "surplus_delta.md"
+
+    assert main(
+        [
+            "surplus-delta",
+            "--scenario", str(SCENARIO),
+            "--sealed", str(sealed_path),
+            "--unsealed", str(unsealed_path),
+            "--out", str(report_path),
+        ]
+    ) == 0
+
+    report = report_path.read_text(encoding="utf-8")
+    assert "`defensive_markup_pct` (0.03 to 0.20 in this scenario)" in report
+    assert "## Zero-markup Control" in report
+    assert "Zero-markup control buyer surplus delta: `0.00`" in report
+    records = [json.loads(line) for line in report_path.with_suffix(".jsonl").read_text(encoding="utf-8").splitlines()]
+    control = next(record for record in records if record["record_type"] == "zero_markup_control")
+    assert control["buyer_surplus_delta"] == 0.0
+    assert control["total_surplus_delta"] == 0.0
+
+
+def test_committed_reports_carry_zero_markup_control() -> None:
+    for name in ["surplus_delta", "surplus_delta_v1"]:
+        report = (ROOT / "reports" / f"{name}.md").read_text(encoding="utf-8")
+        assert "## Zero-markup Control" in report, name
+        lines = (ROOT / "reports" / f"{name}.jsonl").read_text(encoding="utf-8").splitlines()
+        assert any(json.loads(line)["record_type"] == "zero_markup_control" for line in lines), name
+
+
+def test_surplus_delta_rejects_a_scenario_the_receipts_did_not_come_from(tmp_path, capsys) -> None:
+    sealed_path = write_receipt(SCENARIO, "sealed", tmp_path / "sealed")
+    unsealed_path = write_receipt(SCENARIO, "unsealed", tmp_path / "unsealed")
+
+    assert main(
+        [
+            "surplus-delta",
+            "--scenario", str(ROOT / "scenarios" / "v1_20x10.json"),
+            "--sealed", str(sealed_path),
+            "--unsealed", str(unsealed_path),
+            "--out", str(tmp_path / "surplus_delta.md"),
+        ]
+    ) == 1
+    assert "scenario_hash differs" in capsys.readouterr().err
 
 
 def test_cli_validate_missing_path_reports_clean_error(capsys) -> None:
@@ -145,3 +273,72 @@ def test_cli_validate_bad_json_reports_clean_error(tmp_path, capsys) -> None:
 
     err = capsys.readouterr().err
     assert "invalid JSON" in err
+
+
+def test_show_reports_a_mismatched_internal_audit_cleanly(tmp_path, capsys) -> None:
+    run_dir = tmp_path / "sealed"
+    run_dir.mkdir()
+    shutil.copy(ROOT / "runs" / "sealed_v0" / "receipt.json", run_dir / "receipt.json")
+    shutil.copy(ROOT / "runs" / "sealed_v1" / "internal_audit.json", run_dir / "internal_audit.json")
+
+    assert main(
+        ["show", "--sealed", str(run_dir / "receipt.json"), "--unsealed", str(ROOT / "runs" / "unsealed_v0" / "receipt.json")]
+    ) == 1
+    assert "does not belong to receipt" in capsys.readouterr().err
+
+
+def test_show_names_a_missing_internal_audit(tmp_path, capsys) -> None:
+    run_dir = tmp_path / "sealed"
+    run_dir.mkdir()
+    shutil.copy(ROOT / "runs" / "sealed_v0" / "receipt.json", run_dir / "receipt.json")
+
+    assert main(
+        ["show", "--sealed", str(run_dir / "receipt.json"), "--unsealed", str(ROOT / "runs" / "unsealed_v0" / "receipt.json")]
+    ) == 1
+    assert "internal audit file not found" in capsys.readouterr().out
+
+
+def test_scenario_schema_rejects_vickrey_sealed() -> None:
+    # The JSON Schema enum is a second gate on auction_rule; keep it in step with
+    # validate_scenario_data.
+    from jsonschema import Draft202012Validator
+
+    schema = load_json(ROOT / "schemas" / "scenario.schema.json")
+    scenario = load_json(SCENARIO)
+    validator = Draft202012Validator(schema)
+    assert list(validator.iter_errors(scenario)) == []
+    bad = copy.deepcopy(scenario)
+    bad["auction_rule"] = "vickrey-sealed"
+    errors = list(validator.iter_errors(bad))
+    assert any(list(error.path) == ["auction_rule"] for error in errors)
+
+
+def test_validate_receipt_rejects_a_scalar_opened_bid() -> None:
+    receipt = load_json(ROOT / "runs" / "sealed_v0" / "receipt.json")
+    bad = copy.deepcopy(receipt)
+    bad["assignments"][1]["opened_bid"] = "S08 true cost 16.90"
+
+    assert "assignment L2 opened_bid must be an object or null" in validate_receipt_data(bad)
+
+
+def test_show_and_report_flag_an_unassigned_lot(tmp_path, capsys) -> None:
+    # A reserve the marked-up bids cannot meet leaves L4 unassigned in the unsealed
+    # run. show must not crash, and the report must say the lot went unallocated.
+    scenario = load_json(SCENARIO)
+    for lot in scenario["lots"]:
+        if lot["id"] == "L4":
+            lot["reserve_unit_price"] = 9.6
+    scenario_path = tmp_path / "scenario.json"
+    scenario_path.write_text(json.dumps(scenario), encoding="utf-8")
+    sealed_path = write_receipt(scenario_path, "sealed", tmp_path / "sealed")
+    unsealed_path = write_receipt(scenario_path, "unsealed", tmp_path / "unsealed")
+
+    assert main(["show", "--sealed", str(sealed_path), "--unsealed", str(unsealed_path)]) == 0
+    out = capsys.readouterr().out
+    assert "unassigned lots: sealed none; unsealed L4" in out
+
+    report = write_surplus_report(sealed_path, unsealed_path, tmp_path / "r.md", scenario_path)
+    text = report.read_text(encoding="utf-8")
+    assert "- Unassigned lots: sealed none; unsealed L4." in text
+    assert "| L4 | S07 | 9.5 | unassigned | - |" in text
+    assert "None" not in text

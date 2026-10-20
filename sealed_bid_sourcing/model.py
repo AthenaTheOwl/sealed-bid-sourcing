@@ -10,6 +10,10 @@ GENERATED_AT = "2026-06-22T00:00:00Z"
 LOWER_IS_BETTER = {"price", "lead_time_days"}
 HIGHER_IS_BETTER = {"esg_score", "quality_score"}
 WEIGHT_KEYS = LOWER_IS_BETTER | HIGHER_IS_BETTER
+# Simulator ground truth. The buyer-facing receipt never carries these; they live in
+# the internal audit file written next to it.
+INTERNAL_AUDIT_FIELDS = {"true_unit_cost", "sealed_unit_price", "supplier_surplus", "total_surplus"}
+INTERNAL_SURPLUS_FIELDS = {"supplier", "total"}
 
 
 def load_json(path: str | Path) -> dict[str, Any]:
@@ -41,8 +45,10 @@ def validate_scenario_data(scenario: dict[str, Any]) -> list[str]:
         errors.append(f"missing root fields: {', '.join(missing)}")
         return errors
 
-    if scenario["auction_rule"] not in {"first-price-sealed", "vickrey-sealed"}:
-        errors.append("auction_rule must be first-price-sealed or vickrey-sealed")
+    # The runtime clears every lot at the winner's own bid. A rule it does not
+    # implement must not validate, or the receipt would name a rule that never ran.
+    if scenario["auction_rule"] not in {"first-price-sealed"}:
+        errors.append("auction_rule must be first-price-sealed (the only rule the runtime implements)")
 
     suppliers = scenario.get("suppliers", [])
     lots = scenario.get("lots", [])
@@ -155,11 +161,19 @@ def validate_receipt_data(receipt: dict[str, Any]) -> list[str]:
     if not str(receipt["scenario_hash"]).startswith("sha256:"):
         errors.append("scenario_hash must be a sha256 digest")
     surplus = receipt.get("surplus", {})
-    for field in ["buyer", "supplier", "total"]:
-        if field not in surplus:
-            errors.append(f"surplus missing {field}")
+    if "buyer" not in surplus:
+        errors.append("surplus missing buyer")
+    for field in sorted(set(surplus) & INTERNAL_SURPLUS_FIELDS):
+        errors.append(f"surplus.{field} belongs in the internal audit, not the receipt")
     for assignment in receipt.get("assignments", []):
         for field in ["lot_id", "supplier_id", "quantity", "cleared_unit_price", "opened_bid", "score"]:
             if field not in assignment:
                 errors.append(f"assignment missing {field}")
+        opened_bid = assignment.get("opened_bid")
+        if opened_bid is not None and not isinstance(opened_bid, dict):
+            errors.append(f"assignment {assignment.get('lot_id')} opened_bid must be an object or null")
+            opened_bid = {}
+        opened_bid = opened_bid or {}
+        for field in sorted((set(assignment) | set(opened_bid)) & INTERNAL_AUDIT_FIELDS):
+            errors.append(f"assignment {field} belongs in the internal audit, not the receipt")
     return errors

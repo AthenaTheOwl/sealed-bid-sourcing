@@ -18,14 +18,25 @@ runtime_profiles:
       - scenario_id
       - scenario_hash
       - winner_supplier_ids
+      # price, lead time, ESG and quality of each winning bid; never its true cost
       - opened_winning_bid_values
+      # each score is min-max normalized over every eligible bid on the lot, so it
+      # depends on the range of the losing bids even though their values stay sealed
       - per_lot_scores
       - supplier_commitment_hashes
       - runtime_version
+      - buyer_lot_terms
+      - buyer_surplus
+      - receipt_metadata
     disallowed_leakage:
       - losing_bid_values
       - losing_bid_order_book
       - supplier_true_costs_for_losing_bids
+      - supplier_true_costs_for_winning_bids
+      # margin x quantity per lot and its sums (supplier and total surplus); with
+      # the cleared price it gives back the winner's true cost. These stay in the
+      # run's internal_audit.json.
+      - winning_supplier_surplus
     proof_status: bounded placeholder for v0.1 reference runtime
     citations:
       - ScienceDirect Jan 2026 PSI procurement paper
@@ -43,5 +54,46 @@ runtime_profiles:
       - all_bid_values
       - all_supplier_ids
       - scenario_hash
-    disallowed_leakage: []
+      - scenario_id
+      - winner_supplier_ids
+      - opened_winning_bid_values
+      - per_lot_scores
+      - supplier_commitment_hashes
+      - runtime_version
+      - buyer_lot_terms
+      - buyer_surplus
+      - receipt_metadata
+    disallowed_leakage:
+      - supplier_true_costs_for_losing_bids
+      - supplier_true_costs_for_winning_bids
+      - winning_supplier_surplus
+      # the bid a supplier would submit without its defensive markup
+      - pre_markup_bid_values
     proof_status: baseline, not privacy preserving
+# Every field a buyer-facing receipt (runs/*/receipt.json) may carry, mapped to the
+# leakage category it exposes. scripts/validate_leakage_bound.py opens each receipt
+# and fails on a field missing from this map, or one whose category is not in the
+# runtime's allowed_leakage. List items share a path: assignments[].lot_id.
+receipt_fields:
+  receipt_id: receipt_metadata
+  runtime: receipt_metadata
+  generated_at: receipt_metadata
+  leakage_profile: receipt_metadata
+  runtime_version: runtime_version
+  scenario_id: scenario_id
+  scenario_hash: scenario_hash
+  auction_rule: buyer_lot_terms
+  "commitments[].supplier_id": supplier_commitment_hashes
+  "commitments[].commitment_hash": supplier_commitment_hashes
+  "assignments[].lot_id": buyer_lot_terms
+  "assignments[].quantity": buyer_lot_terms
+  "assignments[].status": winner_supplier_ids
+  "assignments[].supplier_id": winner_supplier_ids
+  "assignments[].cleared_unit_price": opened_winning_bid_values
+  "assignments[].opened_bid.unit_price": opened_winning_bid_values
+  "assignments[].opened_bid.lead_time_days": opened_winning_bid_values
+  "assignments[].opened_bid.esg_score": opened_winning_bid_values
+  "assignments[].opened_bid.quality_score": opened_winning_bid_values
+  "assignments[].score": per_lot_scores
+  "assignments[].buyer_surplus": buyer_surplus
+  surplus.buyer: buyer_surplus

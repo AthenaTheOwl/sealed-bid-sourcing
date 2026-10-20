@@ -11,12 +11,15 @@ sealed_bid_sourcing/cli.py
         +-- run --runtime sealed           v
         |                         schemas/scenario.schema.json
         |                         schemas/receipt.schema.json
+        |                         schemas/internal_audit.schema.json
         |
         +-- run --runtime unsealed
         |
         v
-runs/sealed_v0/receipt.json
+runs/sealed_v0/receipt.json          (buyer-facing)
+runs/sealed_v0/internal_audit.json   (true costs, supplier surplus)
 runs/unsealed_v0/receipt.json
+runs/unsealed_v0/internal_audit.json
         |
         v
 reports/surplus_delta.md
@@ -31,12 +34,14 @@ paper/leakage_bounds.yaml
 
 The v0.1 sealed runtime is a reference implementation. It represents the audit
 surface for a sealed run: scenario hash, supplier commitments, winner ids,
-opened winning bids, and surplus totals. It does not implement production MPC.
+opened winning bids, and buyer surplus. Supplier true costs and supplier surplus
+go to a separate internal audit file. It does not implement production MPC.
 
 ## Gate Boundary
 
 The repository gates check three things:
 
 - Scenario and receipt JSON are well formed for the benchmark surface.
-- The leakage file names the fields exposed by the sealed runtime.
+- The leakage file names the fields each runtime may expose, and the leakage
+  gate opens every `runs/*/receipt.json` and fails on any other field.
 - The paper and README avoid banned voice patterns.
