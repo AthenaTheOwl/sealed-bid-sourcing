@@ -3,7 +3,7 @@
 ## PR 0002 — scenario schema, benchmark instance, paper skeleton
 
 - [x] Write `schemas/scenario.schema.json` matching R-SBS-001 and
-      R-SBS-002.
+      R-SBS-002. (Vickrey selection removed; see STATUS.md.)
 - [x] Author `scenarios/v0_10x5.json` matching R-SBS-003.
 - [x] Add `paper/sealed-bid-sourcing.tex` skeleton with section
       headings and the abstract.
