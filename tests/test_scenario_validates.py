@@ -293,3 +293,18 @@ def test_show_names_a_missing_internal_audit(tmp_path, capsys) -> None:
         ["show", "--sealed", str(run_dir / "receipt.json"), "--unsealed", str(ROOT / "runs" / "unsealed_v0" / "receipt.json")]
     ) == 1
     assert "internal audit file not found" in capsys.readouterr().out
+
+
+def test_scenario_schema_rejects_vickrey_sealed() -> None:
+    # The JSON Schema enum is a second gate on auction_rule; keep it in step with
+    # validate_scenario_data.
+    from jsonschema import Draft202012Validator
+
+    schema = load_json(ROOT / "schemas" / "scenario.schema.json")
+    scenario = load_json(SCENARIO)
+    validator = Draft202012Validator(schema)
+    assert list(validator.iter_errors(scenario)) == []
+    bad = copy.deepcopy(scenario)
+    bad["auction_rule"] = "vickrey-sealed"
+    errors = list(validator.iter_errors(bad))
+    assert any(list(error.path) == ["auction_rule"] for error in errors)
