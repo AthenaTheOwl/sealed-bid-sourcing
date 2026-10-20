@@ -18,6 +18,8 @@ from sealed_bid_sourcing.scoring import zero_markup_control
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO = ROOT / "scenarios" / "v0_10x5.json"
+# The committed runs, named so a local run under the gitignored runs/scratch/ does not change the tests.
+COMMITTED_RECEIPTS = [ROOT / "runs" / name / "receipt.json" for name in ("sealed_v0", "unsealed_v0", "sealed_v1", "unsealed_v1")]
 
 
 def test_canonical_scenario_validates() -> None:
@@ -77,8 +79,7 @@ def test_receipts_carry_no_true_costs_or_supplier_surplus() -> None:
     # The buyer-facing receipt must not reveal any supplier's true cost, winners
     # included. Supplier surplus (margin x quantity) and total surplus give the
     # winner's cost back from the cleared price, so they stay out too.
-    receipts = [load_json(path) for path in sorted((ROOT / "runs").glob("*/receipt.json"))]
-    assert len(receipts) == 4
+    receipts = [load_json(path) for path in COMMITTED_RECEIPTS]
     for scenario_path in [SCENARIO, ROOT / "scenarios" / "v1_20x10.json"]:
         scenario = load_json(scenario_path)
         receipts += [build_receipt(scenario, "sealed"), build_receipt(scenario, "unsealed")]
@@ -97,7 +98,7 @@ def test_internal_audit_keeps_supplier_side_numbers() -> None:
     assert unsealed_audit["surplus"] == {"buyer": 11171.0, "supplier": 7519.0, "total": 18690.0}
     l1 = sealed_audit["assignments"][0]
     assert (l1["lot_id"], l1["supplier_id"], l1["true_unit_cost"], l1["supplier_surplus"]) == ("L1", "S07", 10.4, 1040.0)
-    for path in sorted((ROOT / "runs").glob("*/receipt.json")):
+    for path in COMMITTED_RECEIPTS:
         committed = load_json(path.with_name("internal_audit.json"))
         assert committed["receipt_ref"] == load_json(path)["receipt_id"]
 

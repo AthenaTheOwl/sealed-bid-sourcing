@@ -21,11 +21,16 @@ def _write(path: Path, payload: dict) -> Path:
 
 
 def test_gate_passes_on_committed_receipts(capsys) -> None:
+    # Name the committed runs so a local run under the gitignored runs/scratch/
+    # does not change the count.
     gate = _gate()
+    for runtime in ("sealed", "unsealed"):
+        receipts = [str(ROOT / "runs" / f"{runtime}_{version}" / "receipt.json") for version in ("v0", "v1")]
+        assert gate.main([str(BOUNDS), "--runtime", runtime, "--receipts", *receipts]) == 0
+        assert f"OK (2 {runtime} receipt(s) checked)" in capsys.readouterr().out
+    # Default mode globs runs/*/receipt.json and must pass on the tree as committed.
     assert gate.main([str(BOUNDS), "--runtime", "sealed"]) == 0
-    assert "OK (2 sealed receipt(s) checked)" in capsys.readouterr().out
     assert gate.main([str(BOUNDS), "--runtime", "unsealed"]) == 0
-    assert "OK (2 unsealed receipt(s) checked)" in capsys.readouterr().out
 
 
 def test_gate_fails_when_a_receipt_carries_a_true_cost(tmp_path, capsys) -> None:
