@@ -99,3 +99,25 @@ def test_gate_checks_a_value_after_an_unassigned_lot(tmp_path, capsys) -> None:
 
     assert _gate().main([str(BOUNDS), "--runtime", "sealed", "--receipts", str(path)]) == 1
     assert "field assignments[].opened_bid is not declared" in capsys.readouterr().out
+
+
+def test_gate_flags_a_receipt_with_no_runtime_profile(tmp_path, capsys) -> None:
+    # In default glob mode a receipt whose runtime is missing or unknown must not
+    # slip past both the sealed and the unsealed gate runs.
+    gate = _gate()
+    run_dir = tmp_path / "runs" / "zz"
+    run_dir.mkdir(parents=True)
+    receipt = json.loads(SEALED_RECEIPT.read_text(encoding="utf-8"))
+    receipt.pop("runtime")
+    _write(run_dir / "receipt.json", receipt)
+    for runtime in ("sealed", "unsealed"):
+        good = tmp_path / "runs" / f"{runtime}_v0"
+        good.mkdir()
+        (good / "receipt.json").write_text(
+            (ROOT / "runs" / f"{runtime}_v0" / "receipt.json").read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    gate.ROOT = tmp_path
+
+    for runtime in ("sealed", "unsealed"):
+        assert gate.main([str(BOUNDS), "--runtime", runtime]) == 1
+        assert "has no profile under runtime_profiles" in capsys.readouterr().out

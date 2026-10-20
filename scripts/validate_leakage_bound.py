@@ -138,6 +138,11 @@ def main(argv: list[str] | None = None) -> int:
                 runtime = args.runtime  # let check_receipt report it
             if runtime == args.runtime:
                 receipt_paths.append(candidate)
+            elif not isinstance(runtime, str) or runtime not in bounds["runtime_profiles"]:
+                # A receipt no profile covers would otherwise pass every gate run unread.
+                errors.append(
+                    f"{candidate}: runtime {runtime!r} has no profile under runtime_profiles; receipt not checked"
+                )
     if not receipt_paths:
         errors.append(f"no {args.runtime} receipts found under {DEFAULT_RECEIPT_GLOB}; nothing to check")
     for receipt_path in receipt_paths:
