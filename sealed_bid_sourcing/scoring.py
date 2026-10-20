@@ -299,6 +299,15 @@ def load_scenario_for(scenario_path: str | Path, *receipts: dict[str, Any]) -> d
     return scenario
 
 
+def unassigned_lots(receipt: dict[str, Any]) -> list[str]:
+    """Lot ids the receipt left unallocated (no eligible bid cleared)."""
+    return [a["lot_id"] for a in receipt["assignments"] if a.get("supplier_id") is None]
+
+
+def _fmt_unassigned(lots: list[str]) -> str:
+    return ", ".join(lots) if lots else "none"
+
+
 def write_surplus_report(
     sealed_path: str | Path, unsealed_path: str | Path, out_path: str | Path, scenario_path: str | Path
 ) -> Path:
@@ -341,10 +350,10 @@ def write_surplus_report(
         rows.append(
             "| {lot} | {sw} | {sp} | {uw} | {up} | {dt:.2f} |".format(
                 lot=lot_id,
-                sw=s["supplier_id"],
-                sp=s["cleared_unit_price"],
-                uw=u["supplier_id"],
-                up=u["cleared_unit_price"],
+                sw=s["supplier_id"] or "unassigned",
+                sp="-" if s["cleared_unit_price"] is None else s["cleared_unit_price"],
+                uw=u["supplier_id"] or "unassigned",
+                up="-" if u["cleared_unit_price"] is None else u["cleared_unit_price"],
                 dt=round(
                     sealed_audit_by_lot[lot_id]["total_surplus"] - unsealed_audit_by_lot[lot_id]["total_surplus"], 2
                 ),
@@ -367,6 +376,10 @@ def write_surplus_report(
             f"- Markup assumption: the unsealed baseline inflates each bid by its supplier's "
             f"`defensive_markup_pct` ({low_markup:.2f} to {high_markup:.2f} in this scenario) before scoring.",
             f"- Zero-markup control buyer surplus delta: `{control['buyer']:.2f}` (see below).",
+            f"- Unassigned lots: sealed {_fmt_unassigned(unassigned_lots(sealed))}; "
+            f"unsealed {_fmt_unassigned(unassigned_lots(unsealed))}. An unassigned lot adds 0 buyer "
+            "surplus, so a lot only one runtime leaves unassigned counts toward the delta; that is "
+            "infeasibility, not a saving.",
             "",
             "## Zero-markup Control",
             "",

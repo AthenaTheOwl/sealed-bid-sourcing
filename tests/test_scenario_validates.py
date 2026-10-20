@@ -316,3 +316,26 @@ def test_validate_receipt_rejects_a_scalar_opened_bid() -> None:
     bad["assignments"][1]["opened_bid"] = "S08 true cost 16.90"
 
     assert "assignment L2 opened_bid must be an object or null" in validate_receipt_data(bad)
+
+
+def test_show_and_report_flag_an_unassigned_lot(tmp_path, capsys) -> None:
+    # A reserve the marked-up bids cannot meet leaves L4 unassigned in the unsealed
+    # run. show must not crash, and the report must say the lot went unallocated.
+    scenario = load_json(SCENARIO)
+    for lot in scenario["lots"]:
+        if lot["id"] == "L4":
+            lot["reserve_unit_price"] = 9.6
+    scenario_path = tmp_path / "scenario.json"
+    scenario_path.write_text(json.dumps(scenario), encoding="utf-8")
+    sealed_path = write_receipt(scenario_path, "sealed", tmp_path / "sealed")
+    unsealed_path = write_receipt(scenario_path, "unsealed", tmp_path / "unsealed")
+
+    assert main(["show", "--sealed", str(sealed_path), "--unsealed", str(unsealed_path)]) == 0
+    out = capsys.readouterr().out
+    assert "unassigned lots: sealed none; unsealed L4" in out
+
+    report = write_surplus_report(sealed_path, unsealed_path, tmp_path / "r.md", scenario_path)
+    text = report.read_text(encoding="utf-8")
+    assert "- Unassigned lots: sealed none; unsealed L4." in text
+    assert "| L4 | S07 | 9.5 | unassigned | - |" in text
+    assert "None" not in text

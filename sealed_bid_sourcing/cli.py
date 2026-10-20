@@ -11,6 +11,7 @@ from .scoring import (
     load_internal_audit,
     load_scenario_for,
     markup_range,
+    unassigned_lots,
     write_receipt,
     write_surplus_report,
     zero_markup_control,
@@ -61,6 +62,10 @@ def lot_comparison(sealed: dict, unsealed: dict) -> list[dict]:
     return sorted(rows, key=lambda r: -r["buyer_surplus_gain"])
 
 
+def _fmt_price(price: float | None) -> str:
+    return "-" if price is None else f"{price:.2f}"
+
+
 def _cmd_show(args: argparse.Namespace) -> int:
     sealed_path = Path(args.sealed)
     unsealed_path = Path(args.unsealed)
@@ -98,20 +103,33 @@ def _cmd_show(args: argparse.Namespace) -> int:
     print("-" * len(header))
     for r in rows:
         print(
-            f"{r['lot']:<5}{r['sealed_winner']:<12}{r['sealed_price']:>8.2f}  "
-            f"{r['unsealed_winner']:<14}{r['unsealed_price']:>8.2f}  {r['buyer_surplus_gain']:>12,.2f}"
+            f"{r['lot']:<5}{r['sealed_winner'] or 'unassigned':<12}{_fmt_price(r['sealed_price']):>8}  "
+            f"{r['unsealed_winner'] or 'unassigned':<14}{_fmt_price(r['unsealed_price']):>8}  "
+            f"{r['buyer_surplus_gain']:>12,.2f}"
         )
     print()
+    sealed_unassigned = unassigned_lots(sealed)
+    unsealed_unassigned = unassigned_lots(unsealed)
+    if sealed_unassigned or unsealed_unassigned:
+        print(
+            f"unassigned lots: sealed {', '.join(sealed_unassigned) or 'none'}; "
+            f"unsealed {', '.join(unsealed_unassigned) or 'none'} "
+            "(an unassigned lot adds 0 buyer surplus; that gap is infeasibility, not a saving)"
+        )
+        print()
     top = rows[0]
     print(
         f"headline: sealing bids returns +{buyer_delta:,.2f} buyer surplus vs the unsealed "
         f"markup baseline (total surplus delta +{total_delta:,.2f})."
     )
-    print(
-        f"          biggest single-lot gain is {top['lot']}: +{top['buyer_surplus_gain']:,.2f} buyer surplus, "
-        f"where unsealed defensive markups push the cleared price from "
-        f"{top['sealed_price']:.2f} to {top['unsealed_price']:.2f}."
-    )
+    if top["sealed_price"] is None or top["unsealed_price"] is None:
+        reason = "where one runtime leaves the lot unassigned."
+    else:
+        reason = (
+            f"where unsealed defensive markups push the cleared price from "
+            f"{top['sealed_price']:.2f} to {top['unsealed_price']:.2f}."
+        )
+    print(f"          biggest single-lot gain is {top['lot']}: +{top['buyer_surplus_gain']:,.2f} buyer surplus, {reason}")
     return 0
 
 
@@ -178,6 +196,7 @@ def _write_surplus_jsonl(
             "scenario_id": sealed["scenario_id"],
             "runtime": "sealed",
             "receipt_id": sealed["receipt_id"],
+            "unassigned_lots": unassigned_lots(sealed),
             "buyer_surplus": sealed["surplus"]["buyer"],
             "supplier_surplus": sealed_audit["surplus"]["supplier"],
             "total_surplus": sealed_audit["surplus"]["total"],
@@ -187,6 +206,7 @@ def _write_surplus_jsonl(
             "scenario_id": unsealed["scenario_id"],
             "runtime": "unsealed",
             "receipt_id": unsealed["receipt_id"],
+            "unassigned_lots": unassigned_lots(unsealed),
             "buyer_surplus": unsealed["surplus"]["buyer"],
             "supplier_surplus": unsealed_audit["surplus"]["supplier"],
             "total_surplus": unsealed_audit["surplus"]["total"],
