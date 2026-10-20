@@ -21,7 +21,9 @@ encodes that assumption as each supplier's `defensive_markup_pct`, applied befor
 scoring; the repo takes the values as inputs and does not estimate them from
 supplier data. A sealed runtime opens only the winning bids in the buyer-side
 receipt. The losing values, the losing order book, every supplier's true cost,
-winners included: none of it leaves the envelope.
+winners included: none of it leaves the envelope. One thing about the losing bids
+does: each published per-lot score is min-max normalized over every eligible bid
+on the lot, so it moves with the range of the losing bids.
 
 sealed-bid-sourcing runs two matched benchmarks both ways: a ten-supplier, five-lot
 case and a twenty-supplier, ten-lot case. It reports the surplus delta for each,

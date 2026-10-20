@@ -20,6 +20,8 @@ runtime_profiles:
       - winner_supplier_ids
       # price, lead time, ESG and quality of each winning bid; never its true cost
       - opened_winning_bid_values
+      # each score is min-max normalized over every eligible bid on the lot, so it
+      # depends on the range of the losing bids even though their values stay sealed
       - per_lot_scores
       - supplier_commitment_hashes
       - runtime_version
